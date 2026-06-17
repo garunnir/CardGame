@@ -8,6 +8,9 @@ namespace CardGame.CardBattle.Core
     public sealed class UnityInputProvider : IInputProvider
     {
         public event Action<CardModel> CardSelected;
+        public event Action<CardModel, Vector2> CardDragStarted;
+        public event Action<CardModel, CardModel, Vector2> CardDragMoved;
+        public event Action<CardModel, CardModel, Vector2> CardDragEnded;
 
         public bool IsEnabled { get; private set; }
 
@@ -24,6 +27,36 @@ namespace CardGame.CardBattle.Core
             }
 
             CardSelected?.Invoke(card);
+        }
+
+        public void NotifyCardDragStarted(CardModel source, Vector2 pointerPosition)
+        {
+            if (!IsEnabled || source == null)
+            {
+                return;
+            }
+
+            CardDragStarted?.Invoke(source, pointerPosition);
+        }
+
+        public void NotifyCardDragMoved(CardModel source, CardModel hoverTarget, Vector2 pointerPosition)
+        {
+            if (!IsEnabled || source == null)
+            {
+                return;
+            }
+
+            CardDragMoved?.Invoke(source, hoverTarget, pointerPosition);
+        }
+
+        public void NotifyCardDragEnded(CardModel source, CardModel dropTarget, Vector2 pointerPosition)
+        {
+            if (!IsEnabled || source == null)
+            {
+                return;
+            }
+
+            CardDragEnded?.Invoke(source, dropTarget, pointerPosition);
         }
 
         public void BindViews(CardView[] views)
@@ -43,6 +76,12 @@ namespace CardGame.CardBattle.Core
 
                 view.Clicked -= OnViewClicked;
                 view.Clicked += OnViewClicked;
+                view.DragStarted -= OnViewDragStarted;
+                view.DragMoved -= OnViewDragMoved;
+                view.DragEnded -= OnViewDragEnded;
+                view.DragStarted += OnViewDragStarted;
+                view.DragMoved += OnViewDragMoved;
+                view.DragEnded += OnViewDragEnded;
             }
         }
 
@@ -52,6 +91,27 @@ namespace CardGame.CardBattle.Core
             {
                 NotifyCardSelected(view.BoundModel);
             }
+        }
+
+        private void OnViewDragStarted(CardView view, Vector2 pointerPosition)
+        {
+            NotifyCardDragStarted(view?.BoundModel, pointerPosition);
+        }
+
+        private void OnViewDragMoved(CardView view, CardView hoveredView, Vector2 pointerPosition)
+        {
+            NotifyCardDragMoved(
+                view?.BoundModel,
+                hoveredView != null ? hoveredView.BoundModel : null,
+                pointerPosition);
+        }
+
+        private void OnViewDragEnded(CardView view, CardView hoveredView, Vector2 pointerPosition)
+        {
+            NotifyCardDragEnded(
+                view?.BoundModel,
+                hoveredView != null ? hoveredView.BoundModel : null,
+                pointerPosition);
         }
     }
 }

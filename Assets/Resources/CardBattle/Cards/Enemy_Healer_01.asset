@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aa294bba6c8e6624e93a53eb98775a22, type: 3}
-  m_Name: Player_Normal
+  m_Name: Enemy_Healer_01
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
-  cardId: player_normal
-  displayName: Player Normal
+  cardId: Enemy_Healer_01
+  displayName: Enemy Healer 01
   maxHp: 5
   illustration: {fileID: 0}
-  behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345601, type: 2}
+  behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345604, type: 2}

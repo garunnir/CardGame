@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CardGame.CardBattle.Bridge;
 using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Input;
 using CardGame.CardBattle.Presentation;
 using CardGame.CardBattle.States;
 using CardGame.CardBattle.UI;
@@ -14,6 +15,7 @@ namespace CardGame.CardBattle.Core
     public sealed class GameManager : MonoBehaviour
     {
         [SerializeField] private UIManager uiManager;
+        [SerializeField] private DragTargetingPresenter dragTargetingPresenter;
         [SerializeField] private CardView[] playerCardViews = new CardView[BattleField.SlotCount];
         [SerializeField] private CardView[] enemyCardViews = new CardView[BattleField.SlotCount];
         [SerializeField] private float battlePresentationDelay = 0.55f;
@@ -39,6 +41,7 @@ namespace CardGame.CardBattle.Core
         public Action<bool> OnGameOverEvent;
         public Action OnReserveCountChanged;
         public Action OnHealerEffect;
+        public DragTargetingPresenter DragTargetingPresenter => dragTargetingPresenter;
 
         private void Awake()
         {
@@ -55,8 +58,8 @@ namespace CardGame.CardBattle.Core
         /// <summary>로비/외부 덱 데이터로 전투 시작.</summary>
         public void InitializeBattle(List<CardDataAsset> playerDeck, List<CardDataAsset> enemyDeck)
         {
-            PlayerDeckData = playerDeck ?? new List<CardDataAsset>();
-            EnemyDeckData = enemyDeck ?? new List<CardDataAsset>();
+            PlayerDeckData = SanitizeDeck(playerDeck, "Player");
+            EnemyDeckData = SanitizeDeck(enemyDeck, "Enemy");
             ChangeState(new InitState(this));
         }
 
@@ -228,6 +231,17 @@ namespace CardGame.CardBattle.Core
             }
 
             return null;
+        }
+
+        private static List<CardDataAsset> SanitizeDeck(List<CardDataAsset> deck, string teamPrefix)
+        {
+            if (RuntimeDeckFactory.IsDeckValid(deck))
+            {
+                return deck;
+            }
+
+            Debug.LogWarning($"[CardBattle] {teamPrefix} 덱이 유효하지 않아 런타임 기본 덱으로 대체합니다.");
+            return RuntimeDeckFactory.CreateDefaultDeck(teamPrefix);
         }
     }
 }

@@ -1,11 +1,13 @@
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
+using UnityEngine;
 
 namespace CardGame.CardBattle.States
 {
     /// <summary>플레이어 턴 — 카드 선택 후 적 타겟 선택.</summary>
     public sealed class PlayerTurnState : BaseState
     {
+        private readonly CardBattleTargetingPolicy targetingPolicy = new CardBattleTargetingPolicy();
         private CardModel selectedAttacker;
 
         public PlayerTurnState(GameManager context) : base(context)
@@ -24,13 +26,23 @@ namespace CardGame.CardBattle.States
             Context.RaiseHealerPulse();
             Context.InputProvider.CardSelected -= OnCardSelected;
             Context.InputProvider.CardSelected += OnCardSelected;
+            Context.InputProvider.CardDragStarted -= OnCardDragStarted;
+            Context.InputProvider.CardDragMoved -= OnCardDragMoved;
+            Context.InputProvider.CardDragEnded -= OnCardDragEnded;
+            Context.InputProvider.CardDragStarted += OnCardDragStarted;
+            Context.InputProvider.CardDragMoved += OnCardDragMoved;
+            Context.InputProvider.CardDragEnded += OnCardDragEnded;
         }
 
         public override void Exit()
         {
             Context.InputProvider.CardSelected -= OnCardSelected;
+            Context.InputProvider.CardDragStarted -= OnCardDragStarted;
+            Context.InputProvider.CardDragMoved -= OnCardDragMoved;
+            Context.InputProvider.CardDragEnded -= OnCardDragEnded;
             Context.InputProvider.SetEnabled(false);
             selectedAttacker = null;
+            Context.DragTargetingPresenter?.EndDrag();
         }
 
         private void OnCardSelected(CardModel card)
@@ -61,6 +73,51 @@ namespace CardGame.CardBattle.States
 
             Context.PendingAction = new BattleActionRequest(selectedAttacker, card);
             Context.ChangeState(new BattleState(Context, true));
+        }
+
+        private void OnCardDragStarted(CardModel source, Vector2 pointerPosition)
+        {
+            if (!targetingPolicy.CanStartDrag(source))
+            {
+                return;
+            }
+
+            selectedAttacker = source;
+            Context.RaiseAttackerSelected(source);
+            var sourceView = Context.FindView(source);
+            Context.DragTargetingPresenter?.BeginDrag(sourceView != null ? sourceView.transform : null);
+        }
+
+        private void OnCardDragMoved(CardModel source, CardModel hoverTarget, Vector2 pointerPosition)
+        {
+            if (source == null || selectedAttacker != source)
+            {
+                return;
+            }
+
+            var isValidHover = targetingPolicy.IsValidHover(selectedAttacker, hoverTarget);
+            var hoverView = Context.FindView(hoverTarget);
+            Context.DragTargetingPresenter?.UpdateDrag(
+                pointerPosition,
+                hoverView != null ? hoverView.transform : null,
+                isValidHover);
+        }
+
+        private void OnCardDragEnded(CardModel source, CardModel dropTarget, Vector2 pointerPosition)
+        {
+            if (source == null || selectedAttacker != source)
+            {
+                return;
+            }
+
+            Context.DragTargetingPresenter?.EndDrag();
+
+            if (targetingPolicy.TryBuildAction(selectedAttacker, dropTarget, out var action))
+            {
+                Context.PendingAction = action;
+                Context.ChangeState(new BattleState(Context, true));
+                return;
+            }
         }
     }
 }

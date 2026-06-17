@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aa294bba6c8e6624e93a53eb98775a22, type: 3}
-  m_Name: Player_Normal
+  m_Name: Player_Ranged_02
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
-  cardId: player_normal
-  displayName: Player Normal
+  cardId: Player_Ranged_02
+  displayName: Player Ranged 02
   maxHp: 5
   illustration: {fileID: 0}
-  behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345601, type: 2}
+  behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345602, type: 2}

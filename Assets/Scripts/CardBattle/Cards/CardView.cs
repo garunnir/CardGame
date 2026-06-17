@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Input;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -11,25 +11,49 @@ using UnityEngine.UI;
 namespace CardGame.CardBattle.Cards
 {
     /// <summary>카드 UI 바인딩 및 연출 스텁. DOTween + 코루틴 이중 폴백.</summary>
-    public class CardView : MonoBehaviour, IPointerClickHandler
+    public class CardView : MonoBehaviour,
+        IPointerClickHandler,
+        IBeginDragHandler,
+        IDragHandler,
+        IEndDragHandler,
+        IDragSource,
+        IDropTarget,
+        IDragHoverVisual
     {
+        private static readonly List<RaycastResult> PointerRaycastResults = new List<RaycastResult>(16);
+
         [SerializeField] private Image illustrationImage;
         [SerializeField] private Slider hpSlider;
         [SerializeField] private TextMeshProUGUI hpText;
         [SerializeField] private TextMeshProUGUI nameText;
+        [SerializeField] private Image dragHighlightImage;
         [SerializeField] private CanvasGroup canvasGroup;
         [SerializeField] private RectTransform shakeRoot;
         [SerializeField] private float hpTweenDuration = 0.35f;
         [SerializeField] private float attackDashDistance = 40f;
         [SerializeField] private float attackDashDuration = 0.2f;
+        [SerializeField] private Color dragValidColor = new Color(0.3f, 1f, 0.35f, 0.85f);
+        [SerializeField] private Color dragInvalidColor = new Color(1f, 0.35f, 0.35f, 0.85f);
 
         private CardModel boundModel;
         private Vector3 homeLocalPosition;
         private Coroutine hpCoroutine;
         private bool useDotween = true;
+        private bool suppressNextClick;
+        private bool dragStarted;
+        private Sprite fallbackIllustrationSprite;
 
         public CardModel BoundModel => boundModel;
+        public object DragPayload => boundModel;
+        public Transform DragTransform => transform;
+        public bool CanBeginDrag => boundModel != null && boundModel.IsAlive;
+        public object DropPayload => boundModel;
+        public Transform DropTransform => transform;
+
         public event Action<CardView> Clicked;
+        public event Action<CardView, Vector2> DragStarted;
+        public event Action<CardView, CardView, Vector2> DragMoved;
+        public event Action<CardView, CardView, Vector2> DragEnded;
 
         private void Awake()
         {
@@ -48,6 +72,16 @@ namespace CardGame.CardBattle.Cards
             {
                 useDotween = false;
             }
+
+            if (dragHighlightImage != null)
+            {
+                dragHighlightImage.enabled = false;
+            }
+
+            if (illustrationImage != null)
+            {
+                fallbackIllustrationSprite = illustrationImage.sprite;
+            }
         }
 
         public void Bind(CardModel model)
@@ -58,9 +92,13 @@ namespace CardGame.CardBattle.Cards
                 nameText.text = model.DisplayName;
             }
 
-            if (illustrationImage != null && model.Data.illustration != null)
+            if (illustrationImage != null)
             {
-                illustrationImage.sprite = model.Data.illustration;
+                var sprite = model.Data != null && model.Data.illustration != null
+                    ? model.Data.illustration
+                    : fallbackIllustrationSprite;
+                illustrationImage.sprite = sprite;
+                illustrationImage.enabled = true;
             }
 
             RefreshHpInstant();
@@ -80,6 +118,13 @@ namespace CardGame.CardBattle.Cards
 
         public void PlayHpChange(int fromHp, int toHp, Action onComplete = null)
         {
+            if (!CanRunCoroutines())
+            {
+                ApplyHpInstant(toHp);
+                onComplete?.Invoke();
+                return;
+            }
+
             if (hpCoroutine != null)
             {
                 StopCoroutine(hpCoroutine);
@@ -144,6 +189,13 @@ namespace CardGame.CardBattle.Cards
                 return;
             }
 
+            if (!CanRunCoroutines())
+            {
+                onImpact?.Invoke();
+                onComplete?.Invoke();
+                return;
+            }
+
             var duration = dashDuration > 0f ? dashDuration : attackDashDuration;
             var half = duration * 0.5f;
             var direction = (worldTarget - shakeRoot.position).normalized;
@@ -186,6 +238,17 @@ namespace CardGame.CardBattle.Cards
                 ? new Vector3(strength, strength * 0.66f, 0f)
                 : new Vector3(12f, 8f, 0f);
 
+            if (!CanRunCoroutines())
+            {
+                if (shakeRoot != null)
+                {
+                    shakeRoot.localPosition = homeLocalPosition;
+                }
+
+                onComplete?.Invoke();
+                return;
+            }
+
             if (useDotween && shakeRoot != null)
             {
                 shakeRoot.DOShakePosition(0.25f, shakeStrength, 20, 90f, false, true)
@@ -225,6 +288,17 @@ namespace CardGame.CardBattle.Cards
             }
 
             transform.position = fromWorld;
+
+            if (!CanRunCoroutines())
+            {
+                if (canvasGroup != null)
+                {
+                    canvasGroup.alpha = 1f;
+                }
+
+                onComplete?.Invoke();
+                return;
+            }
 
             if (useDotween)
             {
@@ -291,7 +365,61 @@ namespace CardGame.CardBattle.Cards
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (suppressNextClick)
+            {
+                suppressNextClick = false;
+                return;
+            }
+
             OnClick();
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (eventData.button != PointerEventData.InputButton.Left || !CanBeginDrag)
+            {
+                dragStarted = false;
+                return;
+            }
+
+            dragStarted = true;
+            DragStarted?.Invoke(this, eventData.position);
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (!dragStarted)
+            {
+                return;
+            }
+
+            DragMoved?.Invoke(this, FindHoveredCardView(eventData), eventData.position);
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (!dragStarted)
+            {
+                return;
+            }
+
+            dragStarted = false;
+            suppressNextClick = true;
+            DragEnded?.Invoke(this, FindHoveredCardView(eventData), eventData.position);
+        }
+
+        public void SetHoverState(bool isActive, bool isValid)
+        {
+            if (dragHighlightImage == null)
+            {
+                return;
+            }
+
+            dragHighlightImage.enabled = isActive;
+            if (isActive)
+            {
+                dragHighlightImage.color = isValid ? dragValidColor : dragInvalidColor;
+            }
         }
 
         private IEnumerator MoveLocalRoutine(Vector3 from, Vector3 to, float duration)
@@ -315,6 +443,21 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
+        private bool CanRunCoroutines()
+        {
+            return isActiveAndEnabled && gameObject.activeInHierarchy;
+        }
+
+        private void ApplyHpInstant(int hp)
+        {
+            if (hpSlider != null)
+            {
+                hpSlider.value = hp;
+            }
+
+            UpdateHpLabel(hp);
+        }
+
         public void SetHomePosition(Vector3 localPos)
         {
             homeLocalPosition = localPos;
@@ -322,6 +465,33 @@ namespace CardGame.CardBattle.Cards
             {
                 shakeRoot.localPosition = localPos;
             }
+        }
+
+        private CardView FindHoveredCardView(PointerEventData eventData)
+        {
+            if (EventSystem.current == null || eventData == null)
+            {
+                return null;
+            }
+
+            PointerRaycastResults.Clear();
+            EventSystem.current.RaycastAll(eventData, PointerRaycastResults);
+            for (var i = 0; i < PointerRaycastResults.Count; i++)
+            {
+                var hitObject = PointerRaycastResults[i].gameObject;
+                if (hitObject == null)
+                {
+                    continue;
+                }
+
+                var candidate = hitObject.GetComponentInParent<CardView>();
+                if (candidate != null && candidate != this)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
     }
 }

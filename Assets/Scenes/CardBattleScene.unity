@@ -492,7 +492,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -665,7 +665,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -817,11 +817,14 @@ MonoBehaviour:
   hpSlider: {fileID: 437057019}
   hpText: {fileID: 749048330}
   nameText: {fileID: 1350383463}
+  dragHighlightImage: {fileID: 368047203}
   canvasGroup: {fileID: 368047202}
   shakeRoot: {fileID: 368047200}
   hpTweenDuration: 0.35
   attackDashDistance: 40
   attackDashDuration: 0.2
+  dragValidColor: {r: 0.3, g: 1, b: 0.35, a: 0.85}
+  dragInvalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.85}
 --- !u!225 &368047202
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1333,11 +1336,14 @@ MonoBehaviour:
   hpSlider: {fileID: 995888638}
   hpText: {fileID: 1489973995}
   nameText: {fileID: 345012314}
+  dragHighlightImage: {fileID: 525656864}
   canvasGroup: {fileID: 525656863}
   shakeRoot: {fileID: 525656861}
   hpTweenDuration: 0.35
   attackDashDistance: 40
   attackDashDuration: 0.2
+  dragValidColor: {r: 0.3, g: 1, b: 0.35, a: 0.85}
+  dragInvalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.85}
 --- !u!225 &525656863
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1565,6 +1571,7 @@ GameObject:
   - component: {fileID: 582292684}
   - component: {fileID: 582292683}
   - component: {fileID: 582292680}
+  - component: {fileID: 582292685}
   m_Layer: 0
   m_Name: BattleCanvas
   m_TagString: Untagged
@@ -1615,6 +1622,7 @@ RectTransform:
   - {fileID: 1855028754}
   - {fileID: 1864001372}
   - {fileID: 1249158133}
+  - {fileID: 1672696747}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1640,7 +1648,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 100
@@ -1685,6 +1693,26 @@ MonoBehaviour:
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
   m_PresetInfoIsWorld: 0
+--- !u!114 &582292685
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 582292679}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41ecd18994b4af5489e9d084ef5c9e11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Input.DragTargetingPresenter
+  lineRect: {fileID: 1672696747}
+  lineImage: {fileID: 1672696748}
+  rootCanvas: {fileID: 582292682}
+  uiCamera: {fileID: 248838803}
+  lineThickness: 6
+  idleColor: {r: 1, g: 1, b: 1, a: 0.85}
+  validColor: {r: 0.3, g: 1, b: 0.35, a: 0.9}
+  invalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.9}
 --- !u!1 &648794804
 GameObject:
   m_ObjectHideFlags: 0
@@ -1764,7 +1792,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -1909,7 +1937,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -2038,7 +2066,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -2154,11 +2182,14 @@ MonoBehaviour:
   hpSlider: {fileID: 1631354832}
   hpText: {fileID: 994179266}
   nameText: {fileID: 296409746}
+  dragHighlightImage: {fileID: 764350426}
   canvasGroup: {fileID: 764350425}
   shakeRoot: {fileID: 764350423}
   hpTweenDuration: 0.35
   attackDashDistance: 40
   attackDashDuration: 0.2
+  dragValidColor: {r: 0.3, g: 1, b: 0.35, a: 0.85}
+  dragInvalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.85}
 --- !u!225 &764350425
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2305,11 +2336,14 @@ MonoBehaviour:
   hpSlider: {fileID: 578188538}
   hpText: {fileID: 1478346037}
   nameText: {fileID: 1206359673}
+  dragHighlightImage: {fileID: 856922559}
   canvasGroup: {fileID: 856922558}
   shakeRoot: {fileID: 856922556}
   hpTweenDuration: 0.35
   attackDashDistance: 40
   attackDashDuration: 0.2
+  dragValidColor: {r: 0.3, g: 1, b: 0.35, a: 0.85}
+  dragInvalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.85}
 --- !u!225 &856922558
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2655,7 +2689,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -2889,7 +2923,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3220,7 +3254,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3434,7 +3468,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3550,11 +3584,14 @@ MonoBehaviour:
   hpSlider: {fileID: 1480739664}
   hpText: {fileID: 648794806}
   nameText: {fileID: 1455972155}
+  dragHighlightImage: {fileID: 1364695576}
   canvasGroup: {fileID: 1364695575}
   shakeRoot: {fileID: 1364695573}
   hpTweenDuration: 0.35
   attackDashDistance: 40
   attackDashDuration: 0.2
+  dragValidColor: {r: 0.3, g: 1, b: 0.35, a: 0.85}
+  dragInvalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.85}
 --- !u!225 &1364695575
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -3759,7 +3796,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -3945,7 +3982,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -4171,7 +4208,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -4475,6 +4512,81 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &1672696746
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1672696747}
+  - component: {fileID: 1672696749}
+  - component: {fileID: 1672696748}
+  m_Layer: 0
+  m_Name: DragTargetingLine
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1672696747
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1672696746}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 582292681}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -960, y: -540}
+  m_SizeDelta: {x: 1, y: 6}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1672696748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1672696746}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1672696749
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1672696746}
+  m_CullTransparentMesh: 1
 --- !u!1 &1673784573
 GameObject:
   m_ObjectHideFlags: 0
@@ -4727,7 +4839,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -5019,7 +5131,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -5585,6 +5697,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Core.GameManager
   uiManager: {fileID: 582292680}
+  dragTargetingPresenter: {fileID: 582292685}
   playerCardViews:
   - {fileID: 525656862}
   - {fileID: 368047201}
@@ -5959,7 +6072,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -6075,11 +6188,14 @@ MonoBehaviour:
   hpSlider: {fileID: 1083145577}
   hpText: {fileID: 2100637859}
   nameText: {fileID: 1707199675}
+  dragHighlightImage: {fileID: 2103224848}
   canvasGroup: {fileID: 2103224847}
   shakeRoot: {fileID: 2103224845}
   hpTweenDuration: 0.35
   attackDashDistance: 40
   attackDashDuration: 0.2
+  dragValidColor: {r: 0.3, g: 1, b: 0.35, a: 0.85}
+  dragInvalidColor: {r: 1, g: 0.35, b: 0.35, a: 0.85}
 --- !u!225 &2103224847
 CanvasGroup:
   m_ObjectHideFlags: 0
