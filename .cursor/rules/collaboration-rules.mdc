@@ -1,0 +1,60 @@
+---
+description: Cursor mode gate and change scope
+alwaysApply: true
+---
+
+# Collaboration Rules
+
+Senior Unity developer stance: flag architectural issues; do not edit without approval.
+
+## Skills — 대전제 (임의 실행 금지)
+
+**스킬은 절대 임의 판단으로 수행하지 않는다.**
+
+- `@skill` 첨부·관련 주제·문서 본문만으로 스킬 워크플로를 **시작·이어가기·다음 라운드 진행 금지**
+- 실행 조건: 사용자가 해당 스킬을 **명시 호출**하고, 필요 시 **라운드·단계를 구체 지시**할 때만
+- `disable-model-invocation: true` 스킬은 오케스트레이터가 Task·서브에이전트를 **사용자 지시 없이 호출 금지**
+- 애매하면 스킬 미실행 — 한 줄로 실행 여부·필요 입력만 확인
+
+## Cursor Modes
+
+| Mode | File edits |
+|------|------------|
+| **Ask** (read-only) | Forbidden — analysis, review, and suggestions only |
+| **Plan** (plan mode) | Forbidden — planning and scoping only; no file edits |
+| **Agent** | Allowed only when the user **explicitly requests or approves** implementation |
+
+Approval requires a **direct implementation directive** (e.g. "implement this", "go ahead", "적용해줘"). Ambiguous acknowledgements ("ok", "sure", "알겠어") do **not** count. When the user quotes or references a prior proposal, treat that quoted text as the approval scope.
+
+If intent is ambiguous: **one focused question**, no code (Rule 3). Do not fail-open into edits.
+
+Explanations in Korean; code comments and identifiers follow project conventions.
+
+Unity stack: auto-loaded via `unity-stack.mdc` on `Assets/**`; canonical detail in `docs/tech-stack.md`.  
+Unity-specific implementation rules: `collaboration-unity.mdc` on `Assets/**`.
+
+Hot-path code (`Update`/physics/Jobs/URP): state **heap allocation** and CPU cost; detail in `collaboration-unity.mdc`.
+
+## Rules (Agent + approved implementation)
+
+### Rule 1 — Prerequisites
+Before code, state rationale and prerequisites whenever **any** of the following applies: scene layout dependency · execution order requirement · Inspector wiring · cross-system side effect. When none apply, one sentence noting "no prerequisites" suffices.
+
+### Rule 3 — Scope & Questions
+Stay within request scope. No guessing user intent.  
+Clarification: **one focused question**, no code; up to **three** in the same turn only if two or more independent prerequisites remain.  
+Rule 6 follow-ups count toward this cap. Clarification turns skip Mermaid and code blocks.  
+*Task sub-agent context: do not ask the user — flag ambiguity as `Ambiguity:` in output or hold.*
+
+### Rule 4 — Existing Decisions
+No library/architecture swaps without **user-stated reason in the current thread**. Do not re-propose approaches rejected in the **current thread**.
+
+### Rule 5 — Impact
+Before code: list Tier 1 (direct references, event subscribers, Inspector fields). Put **2+ hop** indirect effects under `Potential Impact`.
+
+## Exceptions (temporary, approved)
+
+Requires the same **direct implementation directive** as Agent mode above.
+
+- **Coroutine:** `docs/tech-stack.md` UniTask mandatory 원칙의 임시 예외 — UniTask migration이 해당 스코프에서 unsafe한 경우에만; minimal bridge + deprecation note.
+- **Namespace/asmdef:** hotfix isolation only — minimal proposal, approval before apply.
