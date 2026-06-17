@@ -1,3 +1,4 @@
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace CardGame.CardBattle.Cards
@@ -6,20 +7,27 @@ namespace CardGame.CardBattle.Cards
     [CreateAssetMenu(fileName = "CardData", menuName = "CardGame/CardBattle/Card Data")]
     public class CardDataAsset : ScriptableObject
     {
-        [Tooltip("카드 ID")]
+        [BoxGroup("기본 정보", centerLabel: true)]
+        [LabelText("카드 ID")]
         public string cardId;
 
-        [Tooltip("표시 이름")]
+        [BoxGroup("기본 정보")]
+        [LabelText("표시 이름")]
         public string displayName;
 
-        [Tooltip("카드 타입")]
-        public CardType cardType = CardType.Normal;
-
-        [Tooltip("최대 HP")]
+        [BoxGroup("기본 정보")]
+        [LabelText("최대 HP")]
         [Min(1)]
         public int maxHp = 5;
 
-        [Tooltip("일러스트")]
+        [BoxGroup("기본 정보")]
+        [LabelText("일러스트")]
+        [PreviewField(Height = 80)]
         public Sprite illustration;
+
+        [BoxGroup("행동", centerLabel: true)]
+        [LabelText("행동 SO")]
+        [AssetSelector]
+        public CardBehaviorAsset behavior;
     }
 }

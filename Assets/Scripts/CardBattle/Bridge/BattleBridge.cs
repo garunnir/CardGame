@@ -25,6 +25,10 @@ namespace CardGame.CardBattle.Bridge
             gameManager = manager;
             cardDataLoader = loader;
             audioAdapter = audio;
+            if (gameManager != null && audioAdapter != null)
+            {
+                gameManager.ConfigurePresentation(audioAdapter);
+            }
         }
 
         private void Awake()
@@ -32,6 +36,16 @@ namespace CardGame.CardBattle.Bridge
             if (gameManager == null)
             {
                 gameManager = GetComponent<GameManager>();
+            }
+
+            if (audioAdapter == null)
+            {
+                audioAdapter = GetComponent<BattleAudioAdapter>();
+            }
+
+            if (gameManager != null && audioAdapter != null)
+            {
+                gameManager.ConfigurePresentation(audioAdapter);
             }
         }
 

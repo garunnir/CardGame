@@ -22,11 +22,12 @@ namespace CardGame.CardBattle.Core
             var list = new List<CardDataAsset>(6);
             for (var i = 0; i < DefaultPattern.Length; i++)
             {
+                var type = DefaultPattern[i];
                 var asset = ScriptableObject.CreateInstance<CardDataAsset>();
-                asset.cardId = $"{teamPrefix}_{DefaultPattern[i]}_{i}";
-                asset.displayName = $"{teamPrefix} {DefaultPattern[i]}";
-                asset.cardType = DefaultPattern[i];
-                asset.maxHp = DefaultPattern[i] == CardType.Musou ? 4 : 5;
+                asset.cardId = $"{teamPrefix}_{type}_{i}";
+                asset.displayName = $"{teamPrefix} {type}";
+                asset.behavior = CardBehaviorLibrary.GetRuntimeDefault(type);
+                asset.maxHp = type == CardType.Musou ? 4 : 5;
                 list.Add(asset);
             }
 

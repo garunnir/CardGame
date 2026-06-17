@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33333333444455556666777788889999, type: 3}
+  m_Name: Behavior_Musou
+  m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.MusouBehaviorAsset
+  behaviorId: behavior_musou
+  primaryDamageMultiplier: 1
+  receivesCounterAttack: 1
+  secondaryDamageRatio: 0.5
+  presentation:
+    attackSfx: {fileID: 0}
+    hitSfx: {fileID: 0}
+    secondaryHitSfx: {fileID: 0}
+    counterSfx: {fileID: 0}
+    deathSfx: {fileID: 0}
+    attackVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 0}
+    secondaryHitVfxPrefab: {fileID: 0}
+    attackDashDuration: 0
+    secondaryCameraShake: 0.2

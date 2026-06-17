@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using CardGame.CardBattle.AI;
+using CardGame.CardBattle.Bridge;
 using CardGame.CardBattle.Cards;
-using CardGame.CardBattle.Core;
+using CardGame.CardBattle.Presentation;
 using CardGame.CardBattle.States;
 using CardGame.CardBattle.UI;
 using Cysharp.Threading.Tasks;
@@ -20,6 +20,8 @@ namespace CardGame.CardBattle.Core
 
         private BaseState currentState;
         private UnityInputProvider inputProvider = new UnityInputProvider();
+        private CardPresentationService presentationService;
+        private PresentationPlayer presentationPlayer;
 
         public BattleField Field { get; } = new BattleField();
         public IInputProvider InputProvider => inputProvider;
@@ -42,6 +44,12 @@ namespace CardGame.CardBattle.Core
         {
             inputProvider.BindViews(playerCardViews);
             inputProvider.BindViews(enemyCardViews);
+        }
+
+        public void ConfigurePresentation(BattleAudioAdapter audioAdapter)
+        {
+            presentationService = new CardPresentationService(audioAdapter);
+            presentationPlayer = new PresentationPlayer();
         }
 
         /// <summary>로비/외부 덱 데이터로 전투 시작.</summary>
@@ -71,20 +79,29 @@ namespace CardGame.CardBattle.Core
 
             var beforeAttackerHp = request.Attacker.CurrentHp;
             var beforeTargetHp = request.Target.CurrentHp;
-
-            await PlayPreBattlePresentationAsync(request);
-
-            var result = BattleResolver.Resolve(
+            var resolution = BattleResolver.Plan(
                 request.Attacker,
                 request.Target,
                 enemyField);
 
-            RaiseBattleResolved(result);
-            await PlayPostBattlePresentationAsync(
+            var presentationContext = new PresentationContext(
                 request,
+                resolution,
                 beforeAttackerHp,
                 beforeTargetHp,
-                result);
+                FindView,
+                uiManager,
+                presentationService);
+
+            var sequence = PresentationSequenceBuilder.BuildAttack(
+                presentationContext,
+                battlePresentationDelay);
+
+            var result = presentationPlayer != null
+                ? await presentationPlayer.PlayAttackAsync(presentationContext, sequence)
+                : BattleResolver.Apply(resolution, request.Attacker, request.Target);
+
+            RaiseBattleResolved(result);
 
             Field.ProcessDeathsAndRefill(true);
             Field.ProcessDeathsAndRefill(false);
@@ -173,47 +190,24 @@ namespace CardGame.CardBattle.Core
         public void RaiseHealerPulse()
         {
             OnHealerEffect?.Invoke();
-            uiManager?.PulseHealerBloom();
+            var field = IsPlayerTurn ? Field.PlayerBattlefield : Field.EnemyBattlefield;
+            PlayTurnStartPresentationAsync(field).Forget();
         }
 
-        public async UniTask PlayPreBattlePresentationAsync(BattleActionRequest request)
+        private async UniTaskVoid PlayTurnStartPresentationAsync(CardModel[] battlefield)
         {
-            var attackerView = FindView(request.Attacker);
-            var targetView = FindView(request.Target);
-            if (attackerView != null && targetView != null)
+            if (presentationPlayer == null)
             {
-                var tcs = new UniTaskCompletionSource();
-                attackerView.PlayAttackDash(targetView.transform.position, () => tcs.TrySetResult());
-                await tcs.Task;
+                presentationService?.PlayHealForTeam(battlefield, FindView);
+                return;
             }
 
-            uiManager?.PulseAttackBloom();
-        }
-
-        public async UniTask PlayPostBattlePresentationAsync(
-            BattleActionRequest request,
-            int beforeAttackerHp,
-            int beforeTargetHp,
-            BattleActionResult result)
-        {
-            var attackerView = FindView(request.Attacker);
-            var targetView = FindView(request.Target);
-
-            if (targetView != null)
-            {
-                var tcs = new UniTaskCompletionSource();
-                targetView.PlayHitShake(() => tcs.TrySetResult());
-                targetView.PlayHpChange(beforeTargetHp, request.Target.CurrentHp);
-                await tcs.Task;
-            }
-
-            if (attackerView != null && result.CounterDamage > 0)
-            {
-                attackerView.PlayHpChange(beforeAttackerHp, request.Attacker.CurrentHp);
-            }
-
-            uiManager?.TriggerCameraShake(0.15f);
-            await UniTask.Delay(System.TimeSpan.FromSeconds(battlePresentationDelay));
+            var sequence = PresentationSequenceBuilder.BuildTurnStartHeal(battlefield);
+            await presentationPlayer.PlayTurnStartAsync(
+                sequence,
+                uiManager,
+                presentationService,
+                FindView);
         }
 
         public CardView FindView(CardModel model)

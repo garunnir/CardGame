@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
   cardId: player_normal
   displayName: Player Normal
-  cardType: 0
+  behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345601, type: 2}
   maxHp: 5
   illustration: {fileID: 0}

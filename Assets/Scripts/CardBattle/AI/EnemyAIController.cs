@@ -31,7 +31,8 @@ namespace CardGame.CardBattle.AI
             // 고위험(HP=공격력) 타겟
             score += target.CurrentHp * 10f + HighHpThreatBonus;
 
-            var effect = CardEffectRegistry.Get(attacker.CardType);
+            var preview = AttackModuleCollector.PlanForAiPreview(
+                new AttackContext(attacker, target, null, attacker.Behavior));
 
             // 저HP 공격자 — 반격 없는 원거리 우선
             if (attacker.CurrentHp <= 2 && target.CardType == CardType.Ranged)
@@ -54,13 +55,11 @@ namespace CardGame.CardBattle.AI
             }
 
             // 반격으로 죽는 경우 원거리/저HP 대상 가산
-            if (effect.ReceivesCounterAttack(attacker, target))
+            if (preview.CounterDamage > 0
+                && preview.CounterDamage >= attacker.CurrentHp
+                && target.CardType == CardType.Ranged)
             {
-                var counter = effect.CalculateCounterDamage(attacker, target);
-                if (counter >= attacker.CurrentHp && target.CardType == CardType.Ranged)
-                {
-                    score += SafeRangedBonus;
-                }
+                score += SafeRangedBonus;
             }
 
             return score;

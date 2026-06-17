@@ -128,40 +128,67 @@ namespace CardGame.CardBattle.Cards
 
         public void PlayAttackDash(Vector3 worldTarget, Action onComplete = null)
         {
+            PlayAttackDash(worldTarget, 0f, null, onComplete);
+        }
+
+        public void PlayAttackDash(
+            Vector3 worldTarget,
+            float dashDuration,
+            Action onImpact,
+            Action onComplete = null)
+        {
             if (shakeRoot == null)
             {
+                onImpact?.Invoke();
                 onComplete?.Invoke();
                 return;
             }
 
+            var duration = dashDuration > 0f ? dashDuration : attackDashDuration;
+            var half = duration * 0.5f;
             var direction = (worldTarget - shakeRoot.position).normalized;
             var targetLocal = homeLocalPosition + (Vector3)(direction * attackDashDistance);
 
             if (useDotween)
             {
                 var seq = DOTween.Sequence();
-                seq.Append(shakeRoot.DOLocalMove(targetLocal, attackDashDuration).SetEase(Ease.OutQuad));
-                seq.Append(shakeRoot.DOLocalMove(homeLocalPosition, attackDashDuration).SetEase(Ease.InQuad));
+                seq.Append(shakeRoot.DOLocalMove(targetLocal, half).SetEase(Ease.OutQuad));
+                seq.AppendCallback(() => onImpact?.Invoke());
+                seq.Append(shakeRoot.DOLocalMove(homeLocalPosition, half).SetEase(Ease.InQuad));
                 seq.OnComplete(() => onComplete?.Invoke());
             }
             else
             {
-                StartCoroutine(AttackDashCoroutine(targetLocal, onComplete));
+                StartCoroutine(AttackDashCoroutine(targetLocal, half, onImpact, onComplete));
             }
         }
 
-        private IEnumerator AttackDashCoroutine(Vector3 targetLocal, Action onComplete)
+        private IEnumerator AttackDashCoroutine(
+            Vector3 targetLocal,
+            float halfDuration,
+            Action onImpact,
+            Action onComplete)
         {
-            yield return MoveLocalRoutine(shakeRoot.localPosition, targetLocal, attackDashDuration);
-            yield return MoveLocalRoutine(targetLocal, homeLocalPosition, attackDashDuration);
+            yield return MoveLocalRoutine(shakeRoot.localPosition, targetLocal, halfDuration);
+            onImpact?.Invoke();
+            yield return MoveLocalRoutine(targetLocal, homeLocalPosition, halfDuration);
             onComplete?.Invoke();
         }
 
         public void PlayHitShake(Action onComplete = null)
         {
+            PlayHitShake(0f, onComplete);
+        }
+
+        public void PlayHitShake(float strength, Action onComplete = null)
+        {
+            var shakeStrength = strength > 0f
+                ? new Vector3(strength, strength * 0.66f, 0f)
+                : new Vector3(12f, 8f, 0f);
+
             if (useDotween && shakeRoot != null)
             {
-                shakeRoot.DOShakePosition(0.25f, new Vector3(12f, 8f, 0f), 20, 90f, false, true)
+                shakeRoot.DOShakePosition(0.25f, shakeStrength, 20, 90f, false, true)
                     .OnComplete(() =>
                     {
                         shakeRoot.localPosition = homeLocalPosition;

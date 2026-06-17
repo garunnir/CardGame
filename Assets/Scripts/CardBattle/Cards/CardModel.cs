@@ -15,7 +15,6 @@ namespace CardGame.CardBattle.Cards
             Data = source;
             CardId = source.cardId;
             DisplayName = source.displayName;
-            CardType = source.cardType;
             MaxHp = source.maxHp;
             CurrentHp = source.maxHp;
             IsPlayerTeam = isPlayerTeam;
@@ -25,12 +24,16 @@ namespace CardGame.CardBattle.Cards
         public CardDataAsset Data { get; }
         public string CardId { get; }
         public string DisplayName { get; }
-        public CardType CardType { get; }
         public int MaxHp { get; }
         public int CurrentHp { get; private set; }
         public bool IsPlayerTeam { get; }
         public int SlotIndex { get; set; }
         public bool IsAlive => CurrentHp > 0;
+
+        public CardBehaviorAsset Behavior => CardBehaviorLibrary.Resolve(Data.behavior);
+
+        /// <summary>행동 SO의 StrategyType. 기존 CardType 호출부 호환.</summary>
+        public CardType CardType => Behavior.StrategyType;
 
         /// <summary>현재 HP가 곧 공격력.</summary>
         public int AttackPower => CurrentHp;

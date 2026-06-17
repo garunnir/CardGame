@@ -46,7 +46,10 @@ namespace CardGame.CardBattle.Editor
             var gameManager = systemsGo.AddComponent<GameManager>();
             systemsGo.AddComponent<BattleBridge>();
             systemsGo.AddComponent<BattleSceneBootstrap>();
-            systemsGo.AddComponent<BattleAudioAdapter>();
+            var audioAdapter = systemsGo.AddComponent<BattleAudioAdapter>();
+            var audioSource = systemsGo.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioAdapter.Configure(null, audioSource);
 
             WireUIManager(uiManager, canvasGo, turnBanner.text, turnBanner.group,
                 playerReserve, enemyReserve, winPanel.panel, losePanel.panel, winPanel.button);
@@ -405,10 +408,12 @@ namespace CardGame.CardBattle.Editor
         {
             var bridge = systemsGo.GetComponent<BattleBridge>();
             var bootstrap = systemsGo.GetComponent<BattleSceneBootstrap>();
+            var audio = systemsGo.GetComponent<BattleAudioAdapter>();
             var ui = Object.FindObjectOfType<UIManager>();
 
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("gameManager").objectReferenceValue = gameManager;
+            bridgeSo.FindProperty("audioAdapter").objectReferenceValue = audio;
             bridgeSo.ApplyModifiedPropertiesWithoutUndo();
 
             var bootSo = new SerializedObject(bootstrap);

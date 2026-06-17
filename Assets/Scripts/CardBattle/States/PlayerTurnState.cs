@@ -18,7 +18,7 @@ namespace CardGame.CardBattle.States
         {
             Context.IsPlayerTurn = true;
             Context.InputProvider.SetEnabled(true);
-            HealerCardEffect.ApplyTurnStartHeal(Context.Field.PlayerBattlefield);
+            TurnStartHealEffect.Apply(Context.Field.PlayerBattlefield);
             Context.SyncAllViews();
             Context.RaiseTurnBanner(true);
             Context.RaiseHealerPulse();
