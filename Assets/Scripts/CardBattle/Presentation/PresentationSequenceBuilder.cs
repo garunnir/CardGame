@@ -21,6 +21,8 @@ namespace CardGame.CardBattle.Presentation
                 collector.Modules[i].CollectCues(context, cues);
             }
 
+            DeathPresentationPlanner.AppendDeathCues(context, cues);
+
             if (tailDelay > 0f)
             {
                 cues.Add(new PresentationCue(PresentationCueKind.Wait, tailDelay));

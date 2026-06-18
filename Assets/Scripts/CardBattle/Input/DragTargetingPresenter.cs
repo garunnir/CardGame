@@ -18,8 +18,26 @@ namespace CardGame.CardBattle.Input
         private Transform activeSource;
         private IDragHoverVisual activeHoverVisual;
 
+        private Camera WorldCamera => uiCamera != null ? uiCamera : Camera.main;
+
+        private Camera CanvasCamera
+        {
+            get
+            {
+                if (rootCanvas == null)
+                {
+                    return null;
+                }
+
+                return rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay
+                    ? null
+                    : rootCanvas.worldCamera != null ? rootCanvas.worldCamera : uiCamera;
+            }
+        }
+
         private void Awake()
         {
+            EnsureLineSprite();
             HideLine();
         }
 
@@ -37,7 +55,11 @@ namespace CardGame.CardBattle.Input
                 return;
             }
 
-            var sourceScreen = RectTransformUtility.WorldToScreenPoint(uiCamera, activeSource.position);
+            var worldCamera = WorldCamera;
+            var sourceScreen = worldCamera != null
+                ? RectTransformUtility.WorldToScreenPoint(worldCamera, activeSource.position)
+                : (Vector2)activeSource.position;
+
             var lineColor = idleColor;
             if (hoverTarget != null)
             {
@@ -62,27 +84,27 @@ namespace CardGame.CardBattle.Input
                 return;
             }
 
-            var canvasRect = rootCanvas != null
-                ? rootCanvas.transform as RectTransform
-                : lineRect.parent as RectTransform;
-            if (canvasRect == null)
+            var parentRect = lineRect.parent as RectTransform;
+            if (parentRect == null)
             {
                 return;
             }
 
+            var canvasCamera = CanvasCamera;
+
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    canvasRect,
+                    parentRect,
                     fromScreen,
-                    uiCamera,
+                    canvasCamera,
                     out var fromLocal))
             {
                 return;
             }
 
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    canvasRect,
+                    parentRect,
                     toScreen,
-                    uiCamera,
+                    canvasCamera,
                     out var toLocal))
             {
                 return;
@@ -100,6 +122,14 @@ namespace CardGame.CardBattle.Input
             if (lineImage != null)
             {
                 lineImage.color = color;
+            }
+        }
+
+        private void EnsureLineSprite()
+        {
+            if (lineImage != null && lineImage.sprite == null)
+            {
+                lineImage.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
             }
         }
 

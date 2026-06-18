@@ -1,7 +1,8 @@
 using System.IO;
 using CardGame.CardBattle.Bridge;
-using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
+using CardGame.CardBattle.Input;
+using CardGame.CardBattle.Presentation;
 using CardGame.CardBattle.UI;
 using TMPro;
 using UnityEditor;
@@ -32,9 +33,14 @@ namespace CardGame.CardBattle.Editor
 
             var canvasGo = CreateCanvasRoot();
             var uiManager = canvasGo.AddComponent<UIManager>();
+            var dragPresenter = CreateDragTargetingPresenter(canvasGo.transform);
 
-            var playerCards = CreateCardRow(canvasGo.transform, "PlayerCards", -220f, "PlayerCard");
-            var enemyCards = CreateCardRow(canvasGo.transform, "EnemyCards", 220f, "EnemyCard");
+            CardBattleBoardSetup.EnsureBattleLayoutAsset();
+            var layout = AssetDatabase.LoadAssetAtPath<BattleLayoutConfig>(CardBattleBoardSetup.LayoutPath);
+            var (playerBoardRoot, enemyBoardRoot) = CreateBattleBoardRoots();
+            var boardPresenter = CreateBoardPresenter(playerBoardRoot, enemyBoardRoot, layout);
+
+            ConfigureBattleCamera();
 
             var turnBanner = CreateTurnBanner(canvasGo.transform);
             var playerReserve = CreateLabel(canvasGo.transform, "PlayerReserveText", new Vector2(-760f, -420f), "대기 3");
@@ -53,7 +59,7 @@ namespace CardGame.CardBattle.Editor
 
             WireUIManager(uiManager, canvasGo, turnBanner.text, turnBanner.group,
                 playerReserve, enemyReserve, winPanel.panel, losePanel.panel, winPanel.button);
-            WireGameManager(gameManager, uiManager, playerCards, enemyCards);
+            WireGameManager(gameManager, uiManager, boardPresenter, dragPresenter);
             WireVolume(uiManager, volume);
             WireBridge(systemsGo, gameManager);
 
@@ -72,7 +78,7 @@ namespace CardGame.CardBattle.Editor
 
         private static void EnsureEventSystem()
         {
-            if (Object.FindObjectOfType<EventSystem>() != null)
+            if (Object.FindFirstObjectByType<EventSystem>() != null)
             {
                 return;
             }
@@ -84,7 +90,7 @@ namespace CardGame.CardBattle.Editor
 
         private static Volume EnsureGlobalVolume()
         {
-            var existing = Object.FindObjectOfType<Volume>();
+            var existing = Object.FindFirstObjectByType<Volume>();
             if (existing != null)
             {
                 return existing;
@@ -96,6 +102,93 @@ namespace CardGame.CardBattle.Editor
             volume.isGlobal = true;
             volume.sharedProfile = profile;
             return volume;
+        }
+
+        private static void ConfigureBattleCamera()
+        {
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            var battleBoard = GameObject.Find("BattleBoard")?.transform;
+            if (battleBoard != null)
+            {
+                CardBattleBoardSetup.EnsureBattleBoardViewComponent(battleBoard, camera);
+            }
+
+            if (camera.GetComponent<PhysicsRaycaster>() == null)
+            {
+                camera.gameObject.AddComponent<PhysicsRaycaster>();
+            }
+        }
+
+        private static (Transform player, Transform enemy) CreateBattleBoardRoots()
+        {
+            var board = new GameObject("BattleBoard");
+            var (playerZone, enemyZone) = CardBattleBoardSetup.EnsureBattleBoardHierarchy(board.transform);
+            CardBattleBoardSetup.EnsureBoardZoneLayout(playerZone, isPlayerTeam: true);
+            CardBattleBoardSetup.EnsureBoardZoneLayout(enemyZone, isPlayerTeam: false);
+            return (playerZone, enemyZone);
+        }
+
+        private static CardBoardPresenter CreateBoardPresenter(
+            Transform playerRoot,
+            Transform enemyRoot,
+            BattleLayoutConfig layout)
+        {
+            var go = new GameObject("CardBoardPresenter");
+            var presenter = go.AddComponent<CardBoardPresenter>();
+            var so = new SerializedObject(presenter);
+            so.FindProperty("layout").objectReferenceValue = layout;
+            so.FindProperty("playerBoardRoot").objectReferenceValue = playerRoot;
+            so.FindProperty("enemyBoardRoot").objectReferenceValue = enemyRoot;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return presenter;
+        }
+
+        private static DragTargetingPresenter CreateDragTargetingPresenter(Transform canvasRoot)
+        {
+            var go = new GameObject("DragTargetingPresenter", typeof(RectTransform));
+            go.transform.SetParent(canvasRoot, false);
+
+            var presenterRect = go.GetComponent<RectTransform>();
+            presenterRect.anchorMin = Vector2.zero;
+            presenterRect.anchorMax = Vector2.one;
+            presenterRect.offsetMin = Vector2.zero;
+            presenterRect.offsetMax = Vector2.zero;
+            presenterRect.pivot = new Vector2(0.5f, 0.5f);
+
+            var lineGo = new GameObject("DragLine", typeof(RectTransform));
+            lineGo.transform.SetParent(go.transform, false);
+            var lineRect = lineGo.GetComponent<RectTransform>();
+            lineRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lineRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lineRect.pivot = new Vector2(0.5f, 0.5f);
+            var lineImage = lineGo.AddComponent<Image>();
+            lineImage.raycastTarget = false;
+            var lineSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            if (lineSprite == null)
+            {
+                lineSprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+            }
+
+            if (lineSprite != null)
+            {
+                lineImage.sprite = lineSprite;
+            }
+
+            lineGo.SetActive(false);
+
+            var presenter = go.AddComponent<DragTargetingPresenter>();
+            var so = new SerializedObject(presenter);
+            so.FindProperty("lineRect").objectReferenceValue = lineRect;
+            so.FindProperty("lineImage").objectReferenceValue = lineImage;
+            so.FindProperty("rootCanvas").objectReferenceValue = canvasRoot.GetComponent<Canvas>();
+            so.FindProperty("uiCamera").objectReferenceValue = Camera.main;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return presenter;
         }
 
         private static GameObject CreateCanvasRoot()
@@ -112,53 +205,6 @@ namespace CardGame.CardBattle.Editor
 
             go.AddComponent<GraphicRaycaster>();
             return go;
-        }
-
-        private static CardView[] CreateCardRow(Transform parent, string rowName, float y, string prefix)
-        {
-            var row = new GameObject(rowName).AddComponent<RectTransform>();
-            row.SetParent(parent, false);
-            row.anchorMin = new Vector2(0.5f, 0.5f);
-            row.anchorMax = new Vector2(0.5f, 0.5f);
-            row.pivot = new Vector2(0.5f, 0.5f);
-            row.anchoredPosition = Vector2.zero;
-
-            var views = new CardView[BattleField.SlotCount];
-            var xs = new[] { -280f, 0f, 280f };
-            for (var i = 0; i < BattleField.SlotCount; i++)
-            {
-                views[i] = CreateCard(row, prefix + (i + 1), new Vector2(xs[i], y));
-            }
-
-            return views;
-        }
-
-        private static CardView CreateCard(Transform parent, string name, Vector2 pos)
-        {
-            var go = new GameObject(name, typeof(RectTransform));
-            go.transform.SetParent(parent, false);
-
-            var rt = go.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(240f, 320f);
-            rt.anchoredPosition = pos;
-
-            var image = go.AddComponent<Image>();
-            image.color = new Color(0.18f, 0.2f, 0.28f, 1f);
-            image.raycastTarget = true;
-
-            var canvasGroup = go.AddComponent<CanvasGroup>();
-            var cardView = go.AddComponent<CardView>();
-
-            var nameGo = CreateTmpChild(go.transform, "NameText", new Vector2(0f, 120f), 28, TextAlignmentOptions.Center);
-            nameGo.text = name;
-
-            var hpText = CreateTmpChild(go.transform, "HpText", new Vector2(0f, -120f), 24, TextAlignmentOptions.Center);
-            hpText.text = "5";
-
-            var slider = CreateHpSlider(go.transform);
-
-            WireCardView(cardView, image, slider, hpText, nameGo, canvasGroup, rt);
-            return cardView;
         }
 
         private static TextMeshProUGUI CreateTmpChild(
@@ -179,40 +225,6 @@ namespace CardGame.CardBattle.Editor
             tmp.alignment = align;
             tmp.color = Color.white;
             return tmp;
-        }
-
-        private static Slider CreateHpSlider(Transform parent)
-        {
-            var root = new GameObject("HpSlider", typeof(RectTransform));
-            root.transform.SetParent(parent, false);
-            var rt = root.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(200f, 24f);
-            rt.anchoredPosition = new Vector2(0f, -80f);
-
-            var bg = new GameObject("Background", typeof(RectTransform));
-            bg.transform.SetParent(root.transform, false);
-            var bgImg = bg.AddComponent<Image>();
-            bgImg.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-            Stretch(bg.GetComponent<RectTransform>());
-
-            var fillArea = new GameObject("Fill Area", typeof(RectTransform));
-            fillArea.transform.SetParent(root.transform, false);
-            Stretch(fillArea.GetComponent<RectTransform>());
-
-            var fill = new GameObject("Fill", typeof(RectTransform));
-            fill.transform.SetParent(fillArea.transform, false);
-            var fillImg = fill.AddComponent<Image>();
-            fillImg.color = new Color(0.2f, 0.85f, 0.35f, 1f);
-            Stretch(fill.GetComponent<RectTransform>());
-
-            var slider = root.AddComponent<Slider>();
-            slider.fillRect = fill.GetComponent<RectTransform>();
-            slider.targetGraphic = fillImg;
-            slider.minValue = 0f;
-            slider.maxValue = 10f;
-            slider.value = 5f;
-            slider.interactable = false;
-            return slider;
         }
 
         private static void Stretch(RectTransform rt)
@@ -285,25 +297,6 @@ namespace CardGame.CardBattle.Editor
             return (go, button);
         }
 
-        private static void WireCardView(
-            CardView cardView,
-            Image illustration,
-            Slider slider,
-            TextMeshProUGUI hpText,
-            TextMeshProUGUI nameText,
-            CanvasGroup canvasGroup,
-            RectTransform shakeRoot)
-        {
-            var so = new SerializedObject(cardView);
-            so.FindProperty("illustrationImage").objectReferenceValue = illustration;
-            so.FindProperty("hpSlider").objectReferenceValue = slider;
-            so.FindProperty("hpText").objectReferenceValue = hpText;
-            so.FindProperty("nameText").objectReferenceValue = nameText;
-            so.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
-            so.FindProperty("shakeRoot").objectReferenceValue = shakeRoot;
-            so.ApplyModifiedPropertiesWithoutUndo();
-        }
-
         private static void WireUIManager(
             UIManager ui,
             GameObject canvas,
@@ -330,25 +323,13 @@ namespace CardGame.CardBattle.Editor
         private static void WireGameManager(
             GameManager gm,
             UIManager ui,
-            CardView[] playerCards,
-            CardView[] enemyCards)
+            CardBoardPresenter boardPresenter,
+            DragTargetingPresenter dragPresenter)
         {
             var so = new SerializedObject(gm);
             so.FindProperty("uiManager").objectReferenceValue = ui;
-            var playerProp = so.FindProperty("playerCardViews");
-            playerProp.arraySize = playerCards.Length;
-            for (var i = 0; i < playerCards.Length; i++)
-            {
-                playerProp.GetArrayElementAtIndex(i).objectReferenceValue = playerCards[i];
-            }
-
-            var enemyProp = so.FindProperty("enemyCardViews");
-            enemyProp.arraySize = enemyCards.Length;
-            for (var i = 0; i < enemyCards.Length; i++)
-            {
-                enemyProp.GetArrayElementAtIndex(i).objectReferenceValue = enemyCards[i];
-            }
-
+            so.FindProperty("cardBoardPresenter").objectReferenceValue = boardPresenter;
+            so.FindProperty("dragTargetingPresenter").objectReferenceValue = dragPresenter;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -409,11 +390,12 @@ namespace CardGame.CardBattle.Editor
             var bridge = systemsGo.GetComponent<BattleBridge>();
             var bootstrap = systemsGo.GetComponent<BattleSceneBootstrap>();
             var audio = systemsGo.GetComponent<BattleAudioAdapter>();
-            var ui = Object.FindObjectOfType<UIManager>();
+            var ui = Object.FindFirstObjectByType<UIManager>();
 
             var bridgeSo = new SerializedObject(bridge);
             bridgeSo.FindProperty("gameManager").objectReferenceValue = gameManager;
             bridgeSo.FindProperty("audioAdapter").objectReferenceValue = audio;
+            CardBattleBoardSetup.WireDefaultDecks(bridgeSo);
             bridgeSo.ApplyModifiedPropertiesWithoutUndo();
 
             var bootSo = new SerializedObject(bootstrap);

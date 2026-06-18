@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using CardGame.CardBattle.AI;
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
@@ -6,7 +5,7 @@ using Cysharp.Threading.Tasks;
 
 namespace CardGame.CardBattle.States
 {
-    /// <summary>적 AI 턴 — 전장 적 카드 순차 공격.</summary>
+    /// <summary>적 AI 턴 — 플레이어 턴과 동일하게 1회 공격 후 종료.</summary>
     public sealed class EnemyTurnState : BaseState
     {
         private bool running;
@@ -19,16 +18,21 @@ namespace CardGame.CardBattle.States
 
         public override void Enter()
         {
+            EnterAsync().Forget();
+        }
+
+        private async UniTaskVoid EnterAsync()
+        {
             Context.IsPlayerTurn = false;
             Context.InputProvider.SetEnabled(false);
             TurnStartHealEffect.Apply(Context.Field.EnemyBattlefield);
-            Context.SyncAllViews();
+            await Context.SyncAllViewsAsync();
             Context.RaiseTurnBanner(false);
             Context.RaiseHealerPulse();
-            RunEnemyTurnAsync().Forget();
+            await RunEnemyTurnAsync();
         }
 
-        private async UniTaskVoid RunEnemyTurnAsync()
+        private async UniTask RunEnemyTurnAsync()
         {
             if (running)
             {
@@ -36,30 +40,34 @@ namespace CardGame.CardBattle.States
             }
 
             running = true;
-
-            var actions = EnemyAIController.BuildTurnActions(
-                Context.Field.EnemyBattlefield,
-                Context.Field.PlayerBattlefield);
-
-            for (var i = 0; i < actions.Count; i++)
+            try
             {
                 if (Context.CurrentStateId == BattleFlowStateId.GameOver)
                 {
-                    break;
+                    return;
                 }
 
-                var finished = await Context.ExecuteBattleAsync(actions[i]);
-                if (!finished)
+                var actions = EnemyAIController.BuildTurnActions(
+                    Context.Field.EnemyBattlefield,
+                    Context.Field.PlayerBattlefield);
+
+                if (actions.Count > 0)
                 {
-                    break;
+                    var finished = await Context.ExecuteBattleAsync(actions[0]);
+                    if (!finished)
+                    {
+                        return;
+                    }
                 }
             }
-
-            running = false;
-
-            if (Context.CurrentStateId != BattleFlowStateId.GameOver)
+            finally
             {
-                Context.ChangeState(new PlayerTurnState(Context));
+                running = false;
+
+                if (Context.CurrentStateId != BattleFlowStateId.GameOver)
+                {
+                    Context.ChangeState(new PlayerTurnState(Context));
+                }
             }
         }
     }

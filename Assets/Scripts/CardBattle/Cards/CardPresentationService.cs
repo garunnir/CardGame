@@ -16,7 +16,7 @@ namespace CardGame.CardBattle.Cards
             audio = audioAdapter;
         }
 
-        public void PlayAttack(CardModel attacker, CardView attackerView)
+        public void PlayAttack(CardModel attacker, ICardBattleView attackerView)
         {
             if (attacker == null)
             {
@@ -40,7 +40,7 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        public void PlayHit(CardModel attacker, CardView targetView)
+        public void PlayHit(CardModel attacker, ICardBattleView targetView)
         {
             if (attacker == null)
             {
@@ -64,7 +64,7 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        public void PlayCounter(CardModel attacker, CardView attackerView)
+        public void PlayCounter(CardModel attacker, ICardBattleView attackerView)
         {
             if (attacker == null)
             {
@@ -85,7 +85,7 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        public void PlayMusouSecondaryHit(CardModel attacker, CardView targetView)
+        public void PlayMusouSecondaryHit(CardModel attacker, ICardBattleView targetView)
         {
             if (attacker?.Behavior is MusouBehaviorAsset musou)
             {
@@ -106,7 +106,7 @@ namespace CardGame.CardBattle.Cards
             return 0f;
         }
 
-        public void PlayTurnHeal(CardModel healer, CardView view)
+        public void PlayTurnHeal(CardModel healer, ICardBattleView view)
         {
             if (healer?.Behavior is HealerBehaviorAsset healerBehavior)
             {
@@ -115,7 +115,7 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        public void PlayHealForTeam(CardModel[] battlefield, Func<CardModel, CardView> findView)
+        public void PlayHealForTeam(CardModel[] battlefield, Func<CardModel, ICardBattleView> findView)
         {
             if (battlefield == null)
             {
@@ -137,7 +137,7 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        public void PlayDeath(CardModel card, CardView view)
+        public void PlayDeath(CardModel card, ICardBattleView view)
         {
             if (card == null)
             {
@@ -161,32 +161,33 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        private void PlayAttackClip(AudioClip clip, GameObject vfxPrefab, CardView view)
+        private void PlayAttackClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
         {
             audio?.PlaySfx(clip);
             SpawnVfx(vfxPrefab, view);
         }
 
-        private void PlayHitClip(AudioClip clip, GameObject vfxPrefab, CardView view)
+        private void PlayHitClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
         {
             audio?.PlaySfx(clip);
             SpawnVfx(vfxPrefab, view);
         }
 
-        private void PlayDeathClip(AudioClip clip, GameObject vfxPrefab, CardView view)
+        private void PlayDeathClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
         {
             audio?.PlaySfx(clip);
             SpawnVfx(vfxPrefab, view);
         }
 
-        private static void SpawnVfx(GameObject prefab, CardView view)
+        private static void SpawnVfx(GameObject prefab, ICardBattleView view)
         {
             if (prefab == null || view == null)
             {
                 return;
             }
 
-            var instance = UnityEngine.Object.Instantiate(prefab, view.transform);
+            var anchor = view.ViewTransform;
+            var instance = UnityEngine.Object.Instantiate(prefab, anchor.position, anchor.rotation);
             UnityEngine.Object.Destroy(instance, DefaultVfxLifetime);
         }
     }

@@ -12,7 +12,7 @@ namespace CardGame.CardBattle.Presentation
             AttackResolution resolution,
             int beforeAttackerHp,
             int beforeTargetHp,
-            Func<CardModel, CardView> findView,
+            Func<CardModel, ICardBattleView> findView,
             UIManager ui,
             CardPresentationService presentation)
         {
@@ -32,7 +32,7 @@ namespace CardGame.CardBattle.Presentation
         public CardBehaviorAsset Behavior => Attacker.Behavior;
         public int BeforeAttackerHp { get; }
         public int BeforeTargetHp { get; }
-        public Func<CardModel, CardView> FindView { get; }
+        public Func<CardModel, ICardBattleView> FindView { get; }
         public UIManager Ui { get; }
         public CardPresentationService Presentation { get; }
 

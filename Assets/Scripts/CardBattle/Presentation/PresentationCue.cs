@@ -19,6 +19,7 @@ namespace CardGame.CardBattle.Presentation
         ApplySecondaryDamage,
         CameraShake,
         PlayTurnHealPresentation,
+        PlayDeathPresentation,
     }
 
     public readonly struct PresentationCue

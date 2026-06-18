@@ -1,5 +1,6 @@
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace CardGame.CardBattle.States
@@ -7,21 +8,32 @@ namespace CardGame.CardBattle.States
     /// <summary>플레이어 턴 — 카드 선택 후 적 타겟 선택.</summary>
     public sealed class PlayerTurnState : BaseState
     {
-        private readonly CardBattleTargetingPolicy targetingPolicy = new CardBattleTargetingPolicy();
+        private readonly CardBattleTargetingPolicy targetingPolicy;
         private CardModel selectedAttacker;
 
         public PlayerTurnState(GameManager context) : base(context)
         {
+            targetingPolicy = new CardBattleTargetingPolicy(CanAcceptAsTarget);
+        }
+
+        private bool CanAcceptAsTarget(CardModel model)
+        {
+            return CardTargetingRules.IsFaceUpBattlefieldCard(model, Context.FindView(model));
         }
 
         public override BattleFlowStateId StateId => BattleFlowStateId.PlayerTurn;
 
         public override void Enter()
         {
+            EnterAsync().Forget();
+        }
+
+        private async UniTaskVoid EnterAsync()
+        {
             Context.IsPlayerTurn = true;
-            Context.InputProvider.SetEnabled(true);
             TurnStartHealEffect.Apply(Context.Field.PlayerBattlefield);
-            Context.SyncAllViews();
+            await Context.SyncAllViewsAsync();
+            Context.InputProvider.SetEnabled(true);
             Context.RaiseTurnBanner(true);
             Context.RaiseHealerPulse();
             Context.InputProvider.CardSelected -= OnCardSelected;
@@ -54,7 +66,7 @@ namespace CardGame.CardBattle.States
 
             if (selectedAttacker == null)
             {
-                if (!card.IsPlayerTeam)
+                if (!targetingPolicy.CanStartDrag(card))
                 {
                     return;
                 }
@@ -66,8 +78,18 @@ namespace CardGame.CardBattle.States
 
             if (card.IsPlayerTeam)
             {
+                if (!targetingPolicy.CanStartDrag(card))
+                {
+                    return;
+                }
+
                 selectedAttacker = card;
                 Context.RaiseAttackerSelected(card);
+                return;
+            }
+
+            if (!targetingPolicy.IsValidHover(selectedAttacker, card))
+            {
                 return;
             }
 
@@ -85,7 +107,8 @@ namespace CardGame.CardBattle.States
             selectedAttacker = source;
             Context.RaiseAttackerSelected(source);
             var sourceView = Context.FindView(source);
-            Context.DragTargetingPresenter?.BeginDrag(sourceView != null ? sourceView.transform : null);
+            Context.DragTargetingPresenter?.BeginDrag(
+                sourceView != null ? sourceView.ViewTransform : null);
         }
 
         private void OnCardDragMoved(CardModel source, CardModel hoverTarget, Vector2 pointerPosition)
@@ -99,7 +122,7 @@ namespace CardGame.CardBattle.States
             var hoverView = Context.FindView(hoverTarget);
             Context.DragTargetingPresenter?.UpdateDrag(
                 pointerPosition,
-                hoverView != null ? hoverView.transform : null,
+                hoverView != null ? hoverView.ViewTransform : null,
                 isValidHover);
         }
 

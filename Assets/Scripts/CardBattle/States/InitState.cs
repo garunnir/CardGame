@@ -1,6 +1,5 @@
-using System.Collections.Generic;
-using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
+using Cysharp.Threading.Tasks;
 
 namespace CardGame.CardBattle.States
 {
@@ -14,10 +13,15 @@ namespace CardGame.CardBattle.States
 
         public override void Enter()
         {
+            EnterAsync().Forget();
+        }
+
+        private async UniTaskVoid EnterAsync()
+        {
             Context.Field.Clear();
             Context.Field.DeployInitial(Context.PlayerDeckData, true);
             Context.Field.DeployInitial(Context.EnemyDeckData, false);
-            Context.SyncAllViews();
+            await Context.BuildBoardViewsAsync();
             Context.RaiseReserveChanged();
             Context.ChangeState(new PlayerTurnState(Context));
         }

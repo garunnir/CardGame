@@ -33,7 +33,7 @@ namespace CardGame.CardBattle.Presentation
             PresentationSequence sequence,
             CardGame.CardBattle.UI.UIManager ui,
             CardPresentationService presentation,
-            Func<CardModel, CardView> findView)
+            Func<CardModel, ICardBattleView> findView)
         {
             if (sequence == null)
             {
@@ -50,7 +50,7 @@ namespace CardGame.CardBattle.Presentation
             PresentationCue cue,
             CardGame.CardBattle.UI.UIManager ui,
             CardPresentationService presentation,
-            Func<CardModel, CardView> findView)
+            Func<CardModel, ICardBattleView> findView)
         {
             switch (cue.Kind)
             {
@@ -142,6 +142,10 @@ namespace CardGame.CardBattle.Presentation
                     context.Ui?.TriggerCameraShake(cue.FloatParam);
                     break;
 
+                case PresentationCueKind.PlayDeathPresentation:
+                    await PlayDeathPresentationAsync(context, cue.Subject);
+                    break;
+
                 default:
                     break;
             }
@@ -159,14 +163,14 @@ namespace CardGame.CardBattle.Presentation
 
             var tcs = new UniTaskCompletionSource();
             attackerView.PlayAttackDash(
-                targetView.transform.position,
+                targetView.ViewTransform.position,
                 dashDuration,
                 () => ApplyPrimaryDamage(context),
                 () => tcs.TrySetResult());
             await tcs.Task;
         }
 
-        private static async UniTask PlayHitShakeAsync(CardView view, float strength)
+        private static async UniTask PlayHitShakeAsync(ICardBattleView view, float strength)
         {
             if (view == null)
             {
@@ -178,7 +182,7 @@ namespace CardGame.CardBattle.Presentation
             await tcs.Task;
         }
 
-        private static async UniTask PlayHpBarTweenAsync(CardView view, CardModel model, int beforeHp)
+        private static async UniTask PlayHpBarTweenAsync(ICardBattleView view, CardModel model, int beforeHp)
         {
             if (view == null || model == null)
             {
@@ -187,6 +191,25 @@ namespace CardGame.CardBattle.Presentation
 
             var tcs = new UniTaskCompletionSource();
             view.PlayHpChange(beforeHp, model.CurrentHp, () => tcs.TrySetResult());
+            await tcs.Task;
+        }
+
+        private static async UniTask PlayDeathPresentationAsync(PresentationContext context, CardModel subject)
+        {
+            if (subject == null || subject.IsAlive)
+            {
+                return;
+            }
+
+            var view = context.FindView(subject);
+            context.Presentation?.PlayDeath(subject, view);
+            if (view == null)
+            {
+                return;
+            }
+
+            var tcs = new UniTaskCompletionSource();
+            view.PlayDeathVisual(() => tcs.TrySetResult());
             await tcs.Task;
         }
 

@@ -16,8 +16,7 @@ namespace CardGame.CardBattle.Core
     {
         [SerializeField] private UIManager uiManager;
         [SerializeField] private DragTargetingPresenter dragTargetingPresenter;
-        [SerializeField] private CardView[] playerCardViews = new CardView[BattleField.SlotCount];
-        [SerializeField] private CardView[] enemyCardViews = new CardView[BattleField.SlotCount];
+        [SerializeField] private CardBoardPresenter cardBoardPresenter;
         [SerializeField] private float battlePresentationDelay = 0.55f;
 
         private BaseState currentState;
@@ -45,8 +44,32 @@ namespace CardGame.CardBattle.Core
 
         private void Awake()
         {
-            inputProvider.BindViews(playerCardViews);
-            inputProvider.BindViews(enemyCardViews);
+            if (cardBoardPresenter != null)
+            {
+                cardBoardPresenter.InputHostsChanged += RefreshBoardInput;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (cardBoardPresenter != null)
+            {
+                cardBoardPresenter.InputHostsChanged -= RefreshBoardInput;
+            }
+        }
+
+        public void ConfigureBoard(CardBoardPresenter presenter)
+        {
+            if (cardBoardPresenter != null)
+            {
+                cardBoardPresenter.InputHostsChanged -= RefreshBoardInput;
+            }
+
+            cardBoardPresenter = presenter;
+            if (cardBoardPresenter != null)
+            {
+                cardBoardPresenter.InputHostsChanged += RefreshBoardInput;
+            }
         }
 
         public void ConfigurePresentation(BattleAudioAdapter audioAdapter)
@@ -71,7 +94,10 @@ namespace CardGame.CardBattle.Core
         /// <summary>공격 연산 + 연출 + 사망/승패. true = 전투 계속.</summary>
         public async UniTask<bool> ExecuteBattleAsync(BattleActionRequest request)
         {
-            if (request.Attacker == null || request.Target == null)
+            if (request.Attacker == null
+                || request.Target == null
+                || !request.Attacker.IsAlive
+                || !request.Target.IsAlive)
             {
                 return true;
             }
@@ -100,15 +126,37 @@ namespace CardGame.CardBattle.Core
                 presentationContext,
                 battlePresentationDelay);
 
-            var result = presentationPlayer != null
-                ? await presentationPlayer.PlayAttackAsync(presentationContext, sequence)
-                : BattleResolver.Apply(resolution, request.Attacker, request.Target);
+            BattleActionResult result;
+            if (cardBoardPresenter != null)
+            {
+                await cardBoardPresenter.RunExclusiveAsync(async () =>
+                {
+                    result = presentationPlayer != null
+                        ? await presentationPlayer.PlayAttackAsync(presentationContext, sequence)
+                        : BattleResolver.Apply(resolution, request.Attacker, request.Target);
 
-            RaiseBattleResolved(result);
+                    RaiseBattleResolved(result);
 
-            Field.ProcessDeathsAndRefill(true);
-            Field.ProcessDeathsAndRefill(false);
-            SyncAllViews();
+                    Field.ProcessDeathsAndRefill(true);
+                    Field.ProcessDeathsAndRefill(false);
+                    await cardBoardPresenter.SyncBoardWithinLockAsync(Field, animateRefill: true);
+                });
+
+                RefreshBoardInput();
+                UpdateReserveUi();
+            }
+            else
+            {
+                result = presentationPlayer != null
+                    ? await presentationPlayer.PlayAttackAsync(presentationContext, sequence)
+                    : BattleResolver.Apply(resolution, request.Attacker, request.Target);
+
+                RaiseBattleResolved(result);
+
+                Field.ProcessDeathsAndRefill(true);
+                Field.ProcessDeathsAndRefill(false);
+            }
+
             RaiseReserveChanged();
 
             if (Field.IsTeamDefeated(true) || Field.IsTeamDefeated(false))
@@ -128,36 +176,74 @@ namespace CardGame.CardBattle.Core
             currentState.Enter();
         }
 
+        public UniTask BuildBoardViewsAsync()
+        {
+            if (cardBoardPresenter == null)
+            {
+                return UniTask.CompletedTask;
+            }
+
+            return RunBoardPresentationAsync(
+                cardBoardPresenter.BuildBoardAsync(Field),
+                refreshInput: true);
+        }
+
+        public UniTask SyncBoardViewsAsync(bool animateRefill = false)
+        {
+            if (cardBoardPresenter == null)
+            {
+                return UniTask.CompletedTask;
+            }
+
+            return RunBoardPresentationAsync(
+                cardBoardPresenter.SyncBoardAsync(Field, animateRefill),
+                refreshInput: true);
+        }
+
+        public UniTask SyncAllViewsAsync()
+        {
+            return SyncBoardViewsAsync(animateRefill: false);
+        }
+
+        private async UniTask RunBoardPresentationAsync(UniTask boardTask, bool refreshInput)
+        {
+            await boardTask;
+            if (refreshInput)
+            {
+                RefreshBoardInput();
+            }
+
+            UpdateReserveUi();
+        }
+
+        public void BuildBoardViews()
+        {
+            BuildBoardViewsAsync().Forget();
+        }
+
+        public void SyncBoardViews(bool animateRefill = false)
+        {
+            SyncBoardViewsAsync(animateRefill).Forget();
+        }
+
         public void SyncAllViews()
         {
-            SyncTeamViews(Field.PlayerBattlefield, playerCardViews);
-            SyncTeamViews(Field.EnemyBattlefield, enemyCardViews);
+            SyncAllViewsAsync().Forget();
+        }
+
+        private void RefreshBoardInput()
+        {
+            if (cardBoardPresenter != null)
+            {
+                inputProvider.BindInputHosts(cardBoardPresenter.InputHosts);
+            }
+        }
+
+        private void UpdateReserveUi()
+        {
             uiManager?.UpdateReserveCounts(
                 Field.PlayerReserve.Count,
                 Field.EnemyReserve.Count);
-        }
-
-        private static void SyncTeamViews(CardModel[] models, CardView[] views)
-        {
-            for (var i = 0; i < views.Length; i++)
-            {
-                var view = views[i];
-                if (view == null)
-                {
-                    continue;
-                }
-
-                var model = i < models.Length ? models[i] : null;
-                if (model != null && model.IsAlive)
-                {
-                    view.gameObject.SetActive(true);
-                    view.Bind(model);
-                }
-                else
-                {
-                    view.gameObject.SetActive(false);
-                }
-            }
         }
 
         public void RaiseTurnBanner(bool isPlayerTurn)
@@ -213,24 +299,11 @@ namespace CardGame.CardBattle.Core
                 FindView);
         }
 
-        public CardView FindView(CardModel model)
+        public ICardBattleView FindView(CardModel model)
         {
-            if (model == null)
-            {
-                return null;
-            }
-
-            var views = model.IsPlayerTeam ? playerCardViews : enemyCardViews;
-            for (var i = 0; i < views.Length; i++)
-            {
-                var view = views[i];
-                if (view != null && view.BoundModel == model)
-                {
-                    return view;
-                }
-            }
-
-            return null;
+            return cardBoardPresenter != null
+                ? cardBoardPresenter.FindView(model)
+                : null;
         }
 
         private static List<CardDataAsset> SanitizeDeck(List<CardDataAsset> deck, string teamPrefix)

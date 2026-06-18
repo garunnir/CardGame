@@ -4,9 +4,12 @@ using UnityEngine;
 
 namespace CardGame.CardBattle.Core
 {
-    /// <summary>CardView 클릭을 GameManager로 전달하는 입력 래퍼.</summary>
+    /// <summary>카드 클릭·드래그 입력 추상화.</summary>
     public sealed class UnityInputProvider : IInputProvider
     {
+        private readonly System.Collections.Generic.List<ICardInputHost> boundHosts =
+            new System.Collections.Generic.List<ICardInputHost>();
+
         public event Action<CardModel> CardSelected;
         public event Action<CardModel, Vector2> CardDragStarted;
         public event Action<CardModel, CardModel, Vector2> CardDragMoved;
@@ -59,58 +62,75 @@ namespace CardGame.CardBattle.Core
             CardDragEnded?.Invoke(source, dropTarget, pointerPosition);
         }
 
-        public void BindViews(CardView[] views)
+        public void BindInputHosts(System.Collections.Generic.IReadOnlyList<ICardInputHost> hosts)
         {
-            if (views == null)
+            for (var i = 0; i < boundHosts.Count; i++)
+            {
+                UnbindHost(boundHosts[i]);
+            }
+
+            boundHosts.Clear();
+
+            if (hosts == null)
             {
                 return;
             }
 
-            for (var i = 0; i < views.Length; i++)
+            for (var i = 0; i < hosts.Count; i++)
             {
-                var view = views[i];
-                if (view == null)
+                var host = hosts[i];
+                if (host == null || boundHosts.Contains(host))
                 {
                     continue;
                 }
 
-                view.Clicked -= OnViewClicked;
-                view.Clicked += OnViewClicked;
-                view.DragStarted -= OnViewDragStarted;
-                view.DragMoved -= OnViewDragMoved;
-                view.DragEnded -= OnViewDragEnded;
-                view.DragStarted += OnViewDragStarted;
-                view.DragMoved += OnViewDragMoved;
-                view.DragEnded += OnViewDragEnded;
+                host.Clicked += OnHostClicked;
+                host.DragStarted += OnHostDragStarted;
+                host.DragMoved += OnHostDragMoved;
+                host.DragEnded += OnHostDragEnded;
+                boundHosts.Add(host);
             }
         }
 
-        private void OnViewClicked(CardView view)
+        private void UnbindHost(ICardInputHost host)
         {
-            if (view?.BoundModel != null)
+            if (host == null)
             {
-                NotifyCardSelected(view.BoundModel);
+                return;
+            }
+
+            host.Clicked -= OnHostClicked;
+            host.DragStarted -= OnHostDragStarted;
+            host.DragMoved -= OnHostDragMoved;
+            host.DragEnded -= OnHostDragEnded;
+        }
+
+        private void OnHostClicked(ICardInputHost host)
+        {
+            if (host?.BoundModel != null)
+            {
+                NotifyCardSelected(host.BoundModel);
             }
         }
 
-        private void OnViewDragStarted(CardView view, Vector2 pointerPosition)
+        private void OnHostDragStarted(ICardInputHost host, Vector2 pointerPosition)
         {
-            NotifyCardDragStarted(view?.BoundModel, pointerPosition);
+            NotifyCardDragStarted(host?.BoundModel, pointerPosition);
         }
 
-        private void OnViewDragMoved(CardView view, CardView hoveredView, Vector2 pointerPosition)
+        private void OnHostDragMoved(ICardInputHost source, ICardInputHost hoveredHost, Vector2 pointerPosition)
         {
             NotifyCardDragMoved(
-                view?.BoundModel,
-                hoveredView != null ? hoveredView.BoundModel : null,
+                source?.BoundModel,
+                hoveredHost?.BoundModel,
                 pointerPosition);
         }
 
-        private void OnViewDragEnded(CardView view, CardView hoveredView, Vector2 pointerPosition)
+        private void OnHostDragEnded(ICardInputHost source, ICardInputHost dropHost, Vector2 pointerPosition)
         {
             NotifyCardDragEnded(
-                view?.BoundModel,
-                hoveredView != null ? hoveredView.BoundModel : null,
+                source?.BoundModel,
+                dropHost?.BoundModel,
                 pointerPosition);
         }
     }

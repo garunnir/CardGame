@@ -9,6 +9,7 @@ namespace CardGame.CardBattle.Editor
     {
         private const string BehaviorFolder = "Assets/Resources/CardBattle/Behaviors";
         private const string CardFolder = "Assets/Resources/CardBattle/Cards";
+        private const string IllustrationPath = "Assets/Resources/CardBattle/Art/CardIllustration_Default.png";
 
         [MenuItem("CardGame/CardBattle/Create Default Behavior Assets")]
         public static void CreateDefaultBehaviorAssets()
@@ -23,6 +24,36 @@ namespace CardGame.CardBattle.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[CardBattle] 타입별 CardBehaviorAsset 4종 생성 완료.");
+        }
+
+        [MenuItem("CardGame/CardBattle/Assign Default Card Illustrations")]
+        public static void AssignDefaultCardIllustrations()
+        {
+            var placeholder = AssetDatabase.LoadAssetAtPath<Sprite>(IllustrationPath);
+            if (placeholder == null)
+            {
+                Debug.LogError("[CardBattle] 기본 일러스트 없음: " + IllustrationPath);
+                return;
+            }
+
+            var guids = AssetDatabase.FindAssets("t:CardDataAsset", new[] { CardFolder });
+            var updated = 0;
+            for (var i = 0; i < guids.Length; i++)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                var card = AssetDatabase.LoadAssetAtPath<CardDataAsset>(path);
+                if (card == null || card.illustration != null)
+                {
+                    continue;
+                }
+
+                card.illustration = placeholder;
+                EditorUtility.SetDirty(card);
+                updated++;
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[CardBattle] CardDataAsset 일러스트 {updated}건에 기본 스프라이트를 지정했습니다.");
         }
 
         [MenuItem("CardGame/CardBattle/Link Card Data To Behaviors")]

@@ -76,7 +76,7 @@ namespace CardGame.CardBattle.Bridge
             gameManager.InitializeBattle(player, enemy);
         }
 
-        private static List<CardDataAsset> BuildDeck(CardDataAsset[] source, string teamPrefix)
+        private List<CardDataAsset> BuildDeck(CardDataAsset[] source, string teamPrefix)
         {
             var list = new List<CardDataAsset>();
             if (source != null)
@@ -92,10 +92,25 @@ namespace CardGame.CardBattle.Bridge
 
             if (!RuntimeDeckFactory.IsDeckValid(list))
             {
-                return RuntimeDeckFactory.CreateDefaultDeck(teamPrefix);
+                return LoadDeckFromResources(teamPrefix);
             }
 
             return list;
+        }
+
+        private List<CardDataAsset> LoadDeckFromResources(string teamPrefix)
+        {
+            var loader = cardDataLoader ?? new ResourcesCardDataLoader();
+            var deck = loader.LoadDeck(DefaultDeckCatalog.GetCardIdsForTeam(teamPrefix));
+            if (RuntimeDeckFactory.IsDeckValid(deck))
+            {
+                return deck;
+            }
+
+            Debug.LogWarning(
+                $"[CardBattle] Resources 덱 로드 실패 — 런타임 기본 덱 사용 ({teamPrefix}). "
+                + "CardDataAsset 일러스트가 표시되지 않을 수 있습니다.");
+            return RuntimeDeckFactory.CreateDefaultDeck(teamPrefix);
         }
 
         public void SetResultCallback(Action<bool> callback)

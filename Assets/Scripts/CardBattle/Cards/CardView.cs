@@ -12,6 +12,7 @@ namespace CardGame.CardBattle.Cards
 {
     /// <summary>카드 UI 바인딩 및 연출 스텁. DOTween + 코루틴 이중 폴백.</summary>
     public class CardView : MonoBehaviour,
+        ICardBattleView,
         IPointerClickHandler,
         IBeginDragHandler,
         IDragHandler,
@@ -44,6 +45,7 @@ namespace CardGame.CardBattle.Cards
         private Sprite fallbackIllustrationSprite;
 
         public CardModel BoundModel => boundModel;
+        public Transform ViewTransform => transform;
         public object DragPayload => boundModel;
         public Transform DragTransform => transform;
         public bool CanBeginDrag => boundModel != null && boundModel.IsAlive;
@@ -94,9 +96,7 @@ namespace CardGame.CardBattle.Cards
 
             if (illustrationImage != null)
             {
-                var sprite = model.Data != null && model.Data.illustration != null
-                    ? model.Data.illustration
-                    : fallbackIllustrationSprite;
+                var sprite = CardVisualDefaults.ResolveIllustration(model.Data) ?? fallbackIllustrationSprite;
                 illustrationImage.sprite = sprite;
                 illustrationImage.enabled = true;
             }
@@ -261,6 +261,33 @@ namespace CardGame.CardBattle.Cards
             else
             {
                 StartCoroutine(ShakeCoroutine(onComplete));
+            }
+        }
+
+        public void PlayDeathVisual(Action onComplete = null)
+        {
+            if (!CanRunCoroutines())
+            {
+                gameObject.SetActive(false);
+                onComplete?.Invoke();
+                return;
+            }
+
+            if (useDotween && shakeRoot != null)
+            {
+                shakeRoot.DOScale(Vector3.zero, 0.35f)
+                    .SetEase(Ease.InBack)
+                    .OnComplete(() =>
+                    {
+                        shakeRoot.localScale = Vector3.one;
+                        gameObject.SetActive(false);
+                        onComplete?.Invoke();
+                    });
+            }
+            else
+            {
+                gameObject.SetActive(false);
+                onComplete?.Invoke();
             }
         }
 
