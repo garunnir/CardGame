@@ -10,14 +10,15 @@ namespace CardGame.CardBattle.Presentation
         PlayAttackPresentation,
         PlayShootPresentation,
         AttackDash,
-        PlayHitPresentation,
+        PlayOnHitPresentation,
+        PlayReceivedHitPresentation,
         HitShake,
         HpBarTween,
-        PlayCounterPresentation,
+        PlayCounterOnHitPresentation,
         WaitBeforeSecondary,
-        PlaySecondaryHitPresentation,
+        PlaySecondaryOnHitPresentation,
         CameraShake,
-        PlayTurnHealPresentation,
+        PlayHealOnTargetPresentation,
         PlayDeathPresentation,
     }
 
@@ -29,7 +30,8 @@ namespace CardGame.CardBattle.Presentation
             float floatParam = 0f,
             CardInstanceId subjectId = default,
             int hpFrom = -1,
-            int hpTo = -1)
+            int hpTo = -1,
+            CardInstanceId sourceId = default)
         {
             Kind = kind;
             Duration = duration;
@@ -37,6 +39,7 @@ namespace CardGame.CardBattle.Presentation
             SubjectId = subjectId;
             HpFrom = hpFrom;
             HpTo = hpTo;
+            SourceId = sourceId;
         }
 
         public PresentationCueKind Kind { get; }
@@ -45,5 +48,6 @@ namespace CardGame.CardBattle.Presentation
         public CardInstanceId SubjectId { get; }
         public int HpFrom { get; }
         public int HpTo { get; }
+        public CardInstanceId SourceId { get; }
     }
 }

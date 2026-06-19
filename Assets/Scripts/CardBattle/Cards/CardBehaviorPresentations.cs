@@ -12,11 +12,16 @@ namespace CardGame.CardBattle.Cards
         public AudioClip attackSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("피격")]
+        [LabelText("명중")]
         public AudioClip hitSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("반격")]
+        [LabelText("피격")]
+        public AudioClip receivedHitSfx;
+
+        [FoldoutGroup("사운드")]
+        [LabelText("반격 (미사용)")]
+        [Tooltip("반격 연출은 방어자 명중 슬롯을 사용합니다.")]
         public AudioClip counterSfx;
 
         [FoldoutGroup("사운드")]
@@ -28,8 +33,16 @@ namespace CardGame.CardBattle.Cards
         public GameObject attackVfxPrefab;
 
         [FoldoutGroup("VFX")]
-        [LabelText("피격 이펙트")]
+        [LabelText("명중 이펙트")]
         public GameObject hitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("피격 이펙트")]
+        public GameObject receivedHitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("사망 이펙트")]
+        public GameObject deathVfxPrefab;
 
         [FoldoutGroup("모션")]
         [LabelText("돌진 시간")]
@@ -56,6 +69,10 @@ namespace CardGame.CardBattle.Cards
         public AudioClip hitSfx;
 
         [FoldoutGroup("사운드")]
+        [LabelText("피격")]
+        public AudioClip receivedHitSfx;
+
+        [FoldoutGroup("사운드")]
         [LabelText("사망")]
         public AudioClip deathSfx;
 
@@ -66,6 +83,14 @@ namespace CardGame.CardBattle.Cards
         [FoldoutGroup("VFX")]
         [LabelText("명중 이펙트")]
         public GameObject hitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("피격 이펙트")]
+        public GameObject receivedHitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("사망 이펙트")]
+        public GameObject deathVfxPrefab;
 
         [FoldoutGroup("모션")]
         [LabelText("발사 모션 시간")]
@@ -81,15 +106,20 @@ namespace CardGame.CardBattle.Cards
         public AudioClip attackSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("1타 피격")]
+        [LabelText("1타 명중")]
         public AudioClip hitSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("2타 피격")]
+        [LabelText("2타 명중")]
         public AudioClip secondaryHitSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("반격")]
+        [LabelText("피격")]
+        public AudioClip receivedHitSfx;
+
+        [FoldoutGroup("사운드")]
+        [LabelText("반격 (미사용)")]
+        [Tooltip("반격 연출은 방어자 명중 슬롯을 사용합니다.")]
         public AudioClip counterSfx;
 
         [FoldoutGroup("사운드")]
@@ -101,12 +131,20 @@ namespace CardGame.CardBattle.Cards
         public GameObject attackVfxPrefab;
 
         [FoldoutGroup("VFX")]
-        [LabelText("1타 피격")]
+        [LabelText("1타 명중")]
         public GameObject hitVfxPrefab;
 
         [FoldoutGroup("VFX")]
-        [LabelText("2타 피격")]
+        [LabelText("2타 명중")]
         public GameObject secondaryHitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("피격 이펙트")]
+        public GameObject receivedHitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("사망 이펙트")]
+        public GameObject deathVfxPrefab;
 
         [FoldoutGroup("모션")]
         [LabelText("돌진 시간")]
@@ -136,11 +174,16 @@ namespace CardGame.CardBattle.Cards
         public AudioClip attackSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("피격")]
+        [LabelText("명중")]
         public AudioClip hitSfx;
 
         [FoldoutGroup("사운드")]
-        [LabelText("반격")]
+        [LabelText("피격")]
+        public AudioClip receivedHitSfx;
+
+        [FoldoutGroup("사운드")]
+        [LabelText("반격 (미사용)")]
+        [Tooltip("반격 연출은 방어자 명중 슬롯을 사용합니다.")]
         public AudioClip counterSfx;
 
         [FoldoutGroup("사운드")]
@@ -156,8 +199,16 @@ namespace CardGame.CardBattle.Cards
         public GameObject attackVfxPrefab;
 
         [FoldoutGroup("VFX")]
-        [LabelText("피격")]
+        [LabelText("명중")]
         public GameObject hitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("피격")]
+        public GameObject receivedHitVfxPrefab;
+
+        [FoldoutGroup("VFX")]
+        [LabelText("사망")]
+        public GameObject deathVfxPrefab;
 
         [FoldoutGroup("모션")]
         [LabelText("힐 Bloom 강도")]

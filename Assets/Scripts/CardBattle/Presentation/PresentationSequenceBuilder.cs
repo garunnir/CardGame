@@ -41,31 +41,24 @@ namespace CardGame.CardBattle.Presentation
 
             cues.Add(new PresentationCue(PresentationCueKind.UiHealerBloom));
 
-            var seenHealers = new HashSet<CardModel>();
-            for (var i = 0; i < healEvents.Count; i++)
-            {
-                var healer = healEvents[i].Healer;
-                if (healer == null || !seenHealers.Add(healer))
-                {
-                    continue;
-                }
-
-                cues.Add(new PresentationCue(
-                    PresentationCueKind.PlayTurnHealPresentation,
-                    subjectId: healer.InstanceId));
-            }
-
             for (var i = 0; i < healEvents.Count; i++)
             {
                 var healEvent = healEvents[i];
-                if (healEvent.Target == null)
+                var healer = healEvent.Healer;
+                var target = healEvent.Target;
+                if (healer == null || target == null)
                 {
                     continue;
                 }
 
                 cues.Add(new PresentationCue(
+                    PresentationCueKind.PlayHealOnTargetPresentation,
+                    subjectId: target.InstanceId,
+                    sourceId: healer.InstanceId));
+
+                cues.Add(new PresentationCue(
                     PresentationCueKind.HpBarTween,
-                    subjectId: healEvent.Target.InstanceId,
+                    subjectId: target.InstanceId,
                     hpFrom: healEvent.FromHp,
                     hpTo: healEvent.ToHp));
             }

@@ -10,6 +10,12 @@ namespace CardGame.CardBattle.Editor
         private const string BehaviorFolder = "Assets/Resources/CardBattle/Behaviors";
         private const string CardFolder = "Assets/Resources/CardBattle/Cards";
         private const string IllustrationPath = "Assets/Resources/CardBattle/Art/CardIllustration_Default.png";
+        private const string VfxFolder = "Assets/Resources/CardBattle/Vfx";
+        private const string SharedHitVfxAssetPath = "Assets/Resources/CardBattle/Vfx/SharedHitVfx.prefab";
+        private const string DefaultOnHitVfxPath =
+            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Hit A (Red).prefab";
+        private const string DefaultProjectileVfxPath =
+            "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Electric/CFXR3 Hit Electric C (Air).prefab";
 
         [MenuItem("CardGame/CardBattle/Create Default Behavior Assets")]
         public static void CreateDefaultBehaviorAssets()
@@ -21,9 +27,44 @@ namespace CardGame.CardBattle.Editor
             CreateOrUpdateBehavior<MusouBehaviorAsset>("Behavior_Musou", CardType.Musou);
             CreateOrUpdateBehavior<HealerBehaviorAsset>("Behavior_Healer", CardType.Healer);
 
+            AssignDefaultPresentationVfx();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[CardBattle] 타입별 CardBehaviorAsset 4종 생성 완료.");
+        }
+
+        [MenuItem("CardGame/CardBattle/Assign Default Presentation Vfx")]
+        public static void AssignDefaultPresentationVfx()
+        {
+            EnsureFolder(VfxFolder);
+            var sharedHit = EnsureSharedHitVfxPrefab();
+            var onHit = LoadPrefab(DefaultOnHitVfxPath);
+            var projectile = LoadPrefab(DefaultProjectileVfxPath);
+            if (onHit == null)
+            {
+                Debug.LogWarning("[CardBattle] 기본 명중 VFX 프리팹을 찾을 수 없습니다: " + DefaultOnHitVfxPath);
+            }
+
+            AssignOnHitAndReceivedVfx(LoadBehavior<NormalBehaviorAsset>("Behavior_Normal"), onHit, sharedHit);
+            AssignOnHitAndReceivedVfx(LoadBehavior<RangedBehaviorAsset>("Behavior_Ranged"), onHit, sharedHit);
+            if (LoadBehavior<RangedBehaviorAsset>("Behavior_Ranged") is { } ranged && projectile != null)
+            {
+                ranged.presentation.projectileVfxPrefab = projectile;
+                EditorUtility.SetDirty(ranged);
+            }
+
+            var musou = LoadBehavior<MusouBehaviorAsset>("Behavior_Musou");
+            AssignOnHitAndReceivedVfx(musou, onHit, sharedHit);
+            if (musou != null && onHit != null)
+            {
+                musou.presentation.secondaryHitVfxPrefab = onHit;
+                EditorUtility.SetDirty(musou);
+            }
+
+            AssignOnHitAndReceivedVfx(LoadBehavior<HealerBehaviorAsset>("Behavior_Healer"), onHit, sharedHit);
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CardBattle] 명중·피격 VFX 기본 할당 완료.");
         }
 
         [MenuItem("CardGame/CardBattle/Assign Default Card Illustrations")]
@@ -166,6 +207,105 @@ namespace CardGame.CardBattle.Editor
                     break;
                 case HealerBehaviorAsset healer when healer.presentation == null:
                     healer.presentation = new HealerBehaviorPresentation();
+                    break;
+            }
+        }
+
+        private static GameObject LoadPrefab(string assetPath)
+        {
+            return string.IsNullOrEmpty(assetPath)
+                ? null
+                : AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+        }
+
+        private static GameObject EnsureSharedHitVfxPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(SharedHitVfxAssetPath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var source = LoadPrefab(DefaultOnHitVfxPath);
+            if (source == null)
+            {
+                return null;
+            }
+
+            var instance = UnityEngine.Object.Instantiate(source);
+            var created = PrefabUtility.SaveAsPrefabAsset(instance, SharedHitVfxAssetPath);
+            UnityEngine.Object.DestroyImmediate(instance);
+            return created;
+        }
+
+        private static void AssignOnHitAndReceivedVfx(
+            CardBehaviorAsset behavior,
+            GameObject onHitPrefab,
+            GameObject receivedHitPrefab)
+        {
+            if (behavior == null)
+            {
+                return;
+            }
+
+            EnsurePresentation(behavior);
+            switch (behavior)
+            {
+                case NormalBehaviorAsset normal:
+                    if (onHitPrefab != null)
+                    {
+                        normal.presentation.hitVfxPrefab = onHitPrefab;
+                        normal.presentation.deathVfxPrefab = onHitPrefab;
+                    }
+
+                    if (receivedHitPrefab != null)
+                    {
+                        normal.presentation.receivedHitVfxPrefab = receivedHitPrefab;
+                    }
+
+                    EditorUtility.SetDirty(normal);
+                    break;
+                case RangedBehaviorAsset ranged:
+                    if (onHitPrefab != null)
+                    {
+                        ranged.presentation.hitVfxPrefab = onHitPrefab;
+                        ranged.presentation.deathVfxPrefab = onHitPrefab;
+                    }
+
+                    if (receivedHitPrefab != null)
+                    {
+                        ranged.presentation.receivedHitVfxPrefab = receivedHitPrefab;
+                    }
+
+                    EditorUtility.SetDirty(ranged);
+                    break;
+                case MusouBehaviorAsset musou:
+                    if (onHitPrefab != null)
+                    {
+                        musou.presentation.hitVfxPrefab = onHitPrefab;
+                        musou.presentation.deathVfxPrefab = onHitPrefab;
+                    }
+
+                    if (receivedHitPrefab != null)
+                    {
+                        musou.presentation.receivedHitVfxPrefab = receivedHitPrefab;
+                    }
+
+                    EditorUtility.SetDirty(musou);
+                    break;
+                case HealerBehaviorAsset healer:
+                    if (onHitPrefab != null)
+                    {
+                        healer.presentation.hitVfxPrefab = onHitPrefab;
+                        healer.presentation.deathVfxPrefab = onHitPrefab;
+                    }
+
+                    if (receivedHitPrefab != null)
+                    {
+                        healer.presentation.receivedHitVfxPrefab = receivedHitPrefab;
+                    }
+
+                    EditorUtility.SetDirty(healer);
                     break;
             }
         }

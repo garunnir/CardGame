@@ -21,6 +21,6 @@ MonoBehaviour:
     counterSfx: {fileID: 0}
     deathSfx: {fileID: 0}
     attackVfxPrefab: {fileID: 0}
-    hitVfxPrefab: {fileID: 0}
+    hitVfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
     attackDashDuration: 0
     hitShakeStrength: 0

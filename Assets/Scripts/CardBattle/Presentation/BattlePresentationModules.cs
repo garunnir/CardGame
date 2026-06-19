@@ -22,8 +22,14 @@ namespace CardGame.CardBattle.Presentation
             cues.Add(new PresentationCue(PresentationCueKind.PlayAttackPresentation));
             cues.Add(new PresentationCue(PresentationCueKind.UiAttackBloom));
             cues.Add(new PresentationCue(PresentationCueKind.AttackDash, attackDashDuration));
-            cues.Add(new PresentationCue(PresentationCueKind.PlayHitPresentation));
-            cues.Add(new PresentationCue(PresentationCueKind.HitShake, floatParam: hitShakeStrength));
+            cues.Add(new PresentationCue(PresentationCueKind.PlayOnHitPresentation));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayReceivedHitPresentation,
+                subjectId: targetId));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.HitShake,
+                floatParam: hitShakeStrength,
+                subjectId: targetId));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: targetId,
@@ -47,8 +53,13 @@ namespace CardGame.CardBattle.Presentation
             cues.Add(new PresentationCue(PresentationCueKind.PlayShootPresentation));
             cues.Add(new PresentationCue(PresentationCueKind.UiAttackBloom));
             cues.Add(new PresentationCue(PresentationCueKind.Wait, shootDuration > 0f ? shootDuration : 0.35f));
-            cues.Add(new PresentationCue(PresentationCueKind.PlayHitPresentation));
-            cues.Add(new PresentationCue(PresentationCueKind.HitShake));
+            cues.Add(new PresentationCue(PresentationCueKind.PlayOnHitPresentation));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayReceivedHitPresentation,
+                subjectId: targetId));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.HitShake,
+                subjectId: targetId));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: targetId,
@@ -67,7 +78,14 @@ namespace CardGame.CardBattle.Presentation
             }
 
             var attackerId = context.Attacker.InstanceId;
-            cues.Add(new PresentationCue(PresentationCueKind.PlayCounterPresentation));
+            var defenderId = context.Target.InstanceId;
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayCounterOnHitPresentation,
+                subjectId: attackerId,
+                sourceId: defenderId));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.HitShake,
+                subjectId: attackerId));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: attackerId,
@@ -99,7 +117,13 @@ namespace CardGame.CardBattle.Presentation
                 PresentationCueKind.WaitBeforeSecondary,
                 secondaryHitDelay > 0f ? secondaryHitDelay : 0.15f));
             cues.Add(new PresentationCue(
-                PresentationCueKind.PlaySecondaryHitPresentation,
+                PresentationCueKind.PlaySecondaryOnHitPresentation,
+                subjectId: secondaryId));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayReceivedHitPresentation,
+                subjectId: secondaryId));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.HitShake,
                 subjectId: secondaryId));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,

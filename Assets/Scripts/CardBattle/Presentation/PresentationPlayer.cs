@@ -73,12 +73,13 @@ namespace CardGame.CardBattle.Presentation
                     ui?.PulseHealerBloom();
                     break;
 
-                case PresentationCueKind.PlayTurnHealPresentation:
+                case PresentationCueKind.PlayHealOnTargetPresentation:
                     if (viewRegistry != null
-                        && viewRegistry.TryGetModel(cue.SubjectId, out var healer))
+                        && cue.SourceId.IsValid
+                        && viewRegistry.TryGetModel(cue.SourceId, out var healer)
+                        && viewRegistry.TryGetView(cue.SubjectId, out var healTargetView))
                     {
-                        viewRegistry.TryGetView(cue.SubjectId, out var view);
-                        presentation?.PlayTurnHeal(healer, view);
+                        presentation?.PlayTurnHealOnTarget(healer, healTargetView);
                     }
 
                     break;
@@ -127,28 +128,42 @@ namespace CardGame.CardBattle.Presentation
                     await PlayAttackDashAsync(context, cue.Duration);
                     break;
 
-                case PresentationCueKind.PlayHitPresentation:
-                    context.Presentation?.PlayHit(
+                case PresentationCueKind.PlayOnHitPresentation:
+                    context.Presentation?.PlayOnHit(
                         context.Attacker,
                         context.GetView(context.Target.InstanceId));
                     break;
 
+                case PresentationCueKind.PlayReceivedHitPresentation:
+                    if (context.ViewRegistry.TryGetModel(cue.SubjectId, out var receivedVictim))
+                    {
+                        context.Presentation?.PlayReceivedHit(
+                            receivedVictim,
+                            context.GetView(cue.SubjectId));
+                    }
+
+                    break;
+
                 case PresentationCueKind.HitShake:
-                    await PlayHitShakeAsync(context.GetView(context.Target.InstanceId), cue.FloatParam);
+                    await PlayHitShakeAsync(ResolveShakeView(context, cue), cue.FloatParam);
                     break;
 
                 case PresentationCueKind.HpBarTween:
                     await PlayHpBarTweenAsync(context.GetView(cue.SubjectId), cue.HpFrom, cue.HpTo);
                     break;
 
-                case PresentationCueKind.PlayCounterPresentation:
-                    context.Presentation?.PlayCounter(
-                        context.Attacker,
-                        context.GetView(context.Attacker.InstanceId));
+                case PresentationCueKind.PlayCounterOnHitPresentation:
+                    if (context.ViewRegistry.TryGetModel(cue.SourceId, out var counterDefender))
+                    {
+                        context.Presentation?.PlayCounterOnHit(
+                            counterDefender,
+                            context.GetView(cue.SubjectId));
+                    }
+
                     break;
 
-                case PresentationCueKind.PlaySecondaryHitPresentation:
-                    context.Presentation?.PlayMusouSecondaryHit(
+                case PresentationCueKind.PlaySecondaryOnHitPresentation:
+                    context.Presentation?.PlayMusouSecondaryOnHit(
                         context.Attacker,
                         context.GetView(cue.SubjectId));
                     break;
@@ -164,6 +179,16 @@ namespace CardGame.CardBattle.Presentation
                 default:
                     break;
             }
+        }
+
+        private static ICardBattleView ResolveShakeView(PresentationContext context, PresentationCue cue)
+        {
+            if (cue.SubjectId.IsValid)
+            {
+                return context.GetView(cue.SubjectId);
+            }
+
+            return context.GetView(context.Target.InstanceId);
         }
 
         private static async UniTask PlayAttackDashAsync(PresentationContext context, float dashDuration)
