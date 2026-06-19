@@ -1,3 +1,5 @@
+using CardGame.CardBattle.Core;
+
 namespace CardGame.CardBattle.Presentation
 {
     public enum PresentationCueKind
@@ -8,15 +10,12 @@ namespace CardGame.CardBattle.Presentation
         PlayAttackPresentation,
         PlayShootPresentation,
         AttackDash,
-        ApplyPrimaryDamage,
         PlayHitPresentation,
         HitShake,
         HpBarTween,
         PlayCounterPresentation,
-        ApplyCounterDamage,
         WaitBeforeSecondary,
         PlaySecondaryHitPresentation,
-        ApplySecondaryDamage,
         CameraShake,
         PlayTurnHealPresentation,
         PlayDeathPresentation,
@@ -28,17 +27,23 @@ namespace CardGame.CardBattle.Presentation
             PresentationCueKind kind,
             float duration = 0f,
             float floatParam = 0f,
-            CardGame.CardBattle.Cards.CardModel subject = null)
+            CardInstanceId subjectId = default,
+            int hpFrom = -1,
+            int hpTo = -1)
         {
             Kind = kind;
             Duration = duration;
             FloatParam = floatParam;
-            Subject = subject;
+            SubjectId = subjectId;
+            HpFrom = hpFrom;
+            HpTo = hpTo;
         }
 
         public PresentationCueKind Kind { get; }
         public float Duration { get; }
         public float FloatParam { get; }
-        public CardGame.CardBattle.Cards.CardModel Subject { get; }
+        public CardInstanceId SubjectId { get; }
+        public int HpFrom { get; }
+        public int HpTo { get; }
     }
 }

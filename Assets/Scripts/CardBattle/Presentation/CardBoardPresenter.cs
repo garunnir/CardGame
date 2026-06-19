@@ -9,14 +9,23 @@ using UnityEngine;
 namespace CardGame.CardBattle.Presentation
 {
     /// <summary>3D 카드 보드 스폰·대기열/전장 배치·플립 연출.</summary>
-    public sealed class CardBoardPresenter : MonoBehaviour
+    public sealed class CardBoardPresenter : MonoBehaviour, ICardViewRegistry, ICardBoardSession
     {
+        private sealed class BoardEntitySlot
+        {
+            public CardModel Model;
+            public CardEntity Entity;
+        }
+
         [SerializeField] private BattleLayoutConfig layout;
         [SerializeField] private Transform playerBoardRoot;
         [SerializeField] private Transform enemyBoardRoot;
 
-        private readonly Dictionary<CardModel, CardEntity> entities = new Dictionary<CardModel, CardEntity>();
+        private readonly Dictionary<CardInstanceId, BoardEntitySlot> boardSlots =
+            new Dictionary<CardInstanceId, BoardEntitySlot>();
         private readonly List<ICardInputHost> inputHosts = new List<ICardInputHost>();
+        private readonly List<CardModel> modelBuffer = new List<CardModel>(16);
+        private readonly HashSet<CardModel> modelSetBuffer = new HashSet<CardModel>();
         private bool isBuilt;
         private int boardGeneration;
         private readonly SemaphoreSlim presentationLock = new SemaphoreSlim(1, 1);
@@ -24,6 +33,8 @@ namespace CardGame.CardBattle.Presentation
         public event Action InputHostsChanged;
 
         public IReadOnlyList<ICardInputHost> InputHosts => inputHosts;
+
+        public BattleLayoutConfig Layout => layout;
 
         public void Configure(
             BattleLayoutConfig battleLayout,
@@ -39,16 +50,16 @@ namespace CardGame.CardBattle.Presentation
         {
             boardGeneration++;
 
-            foreach (var pair in entities)
+            foreach (var pair in boardSlots)
             {
-                if (pair.Value != null)
+                if (pair.Value.Entity != null)
                 {
-                    pair.Value.CancelMotion();
-                    Destroy(pair.Value.gameObject);
+                    pair.Value.Entity.CancelMotion();
+                    Destroy(pair.Value.Entity.gameObject);
                 }
             }
 
-            entities.Clear();
+            boardSlots.Clear();
             inputHosts.Clear();
             isBuilt = false;
         }
@@ -124,8 +135,8 @@ namespace CardGame.CardBattle.Presentation
             var generation = boardGeneration;
 
             await UniTask.WhenAll(
-                SpawnTeam(field.PlayerBattlefield, field.PlayerReserve, playerBoardRoot, true, generation),
-                SpawnTeam(field.EnemyBattlefield, field.EnemyReserve, enemyBoardRoot, false, generation));
+                SpawnTeam(field, field.PlayerBattlefield, field.PlayerReserve, playerBoardRoot, true, generation),
+                SpawnTeam(field, field.EnemyBattlefield, field.EnemyReserve, enemyBoardRoot, false, generation));
 
             if (!IsCurrentGeneration(generation))
             {
@@ -133,6 +144,7 @@ namespace CardGame.CardBattle.Presentation
             }
 
             RebuildInputHosts(field);
+            RefreshAllInputTargeting(field);
             isBuilt = true;
             InputHostsChanged?.Invoke();
         }
@@ -147,8 +159,8 @@ namespace CardGame.CardBattle.Presentation
 
             var generation = boardGeneration;
             await UniTask.WhenAll(
-                SyncTeam(field.PlayerBattlefield, field.PlayerReserve, playerBoardRoot, true, animateRefill, generation),
-                SyncTeam(field.EnemyBattlefield, field.EnemyReserve, enemyBoardRoot, false, animateRefill, generation));
+                SyncTeam(field, field.PlayerBattlefield, field.PlayerReserve, playerBoardRoot, true, animateRefill, generation),
+                SyncTeam(field, field.EnemyBattlefield, field.EnemyReserve, enemyBoardRoot, false, animateRefill, generation));
 
             if (!IsCurrentGeneration(generation))
             {
@@ -156,32 +168,176 @@ namespace CardGame.CardBattle.Presentation
             }
 
             RebuildInputHosts(field);
+            RefreshAllInputTargeting(field);
             InputHostsChanged?.Invoke();
         }
 
         private bool IsCurrentGeneration(int generation) => generation == boardGeneration;
 
-        public ICardBattleView FindView(CardModel model)
+        public bool TryGetView(CardInstanceId id, out ICardBattleView view)
         {
-            if (model == null)
+            view = null;
+            if (!id.IsValid)
             {
-                return null;
+                return false;
             }
 
-            return entities.TryGetValue(model, out var entity) ? entity : null;
+            if (boardSlots.TryGetValue(id, out var slot) && slot.Entity != null)
+            {
+                view = slot.Entity;
+                return true;
+            }
+
+            return false;
         }
 
-        private static void SnapCard(CardEntity entity)
+        public bool TryGetModel(CardInstanceId id, out CardModel model)
         {
-            entity.SnapToAnchorPose(Vector3.zero);
+            model = null;
+            if (!id.IsValid)
+            {
+                return false;
+            }
+
+            if (boardSlots.TryGetValue(id, out var slot) && slot.Model != null)
+            {
+                model = slot.Model;
+                return true;
+            }
+
+            return false;
         }
 
-        private static UniTask DeployCard(CardEntity entity, float moveDuration, float flipDuration)
+        private void RegisterEntity(CardModel model, CardEntity entity)
         {
-            return entity.PlayDeployOnAnchorAsync(Vector3.zero, moveDuration, flipDuration);
+            if (model == null || !model.InstanceId.IsValid || entity == null)
+            {
+                return;
+            }
+
+            boardSlots[model.InstanceId] = new BoardEntitySlot
+            {
+                Model = model,
+                Entity = entity,
+            };
+        }
+
+        private bool TryGetEntity(CardModel model, out CardEntity entity)
+        {
+            entity = null;
+            if (model == null || !model.InstanceId.IsValid)
+            {
+                return false;
+            }
+
+            if (!boardSlots.TryGetValue(model.InstanceId, out var slot))
+            {
+                return false;
+            }
+
+            entity = slot.Entity;
+            return entity != null;
+        }
+
+        private bool HasEntity(CardModel model)
+        {
+            return model != null
+                && model.InstanceId.IsValid
+                && boardSlots.ContainsKey(model.InstanceId);
+        }
+
+        private static void RefreshInputTargeting(BattleField field, CardModel model, CardEntity entity)
+        {
+            if (entity == null)
+            {
+                return;
+            }
+
+            entity.ApplyInputTargeting(
+                CardTargetingRules.CanBeginPlayerDrag(field, model),
+                CardTargetingRules.CanAcceptBattlefieldTarget(field, model));
+        }
+
+        private void RefreshAllInputTargeting(BattleField field)
+        {
+            foreach (var pair in boardSlots)
+            {
+                RefreshInputTargeting(field, pair.Value.Model, pair.Value.Entity);
+            }
+        }
+
+        private void SetEntityPhase(BattleField field, CardModel model, CardEntity entity, CardBoardPhase phase)
+        {
+            entity.SetPhase(phase);
+            RefreshInputTargeting(field, model, entity);
+        }
+
+        private static void SnapCard(CardEntity entity, Vector3 localPosition)
+        {
+            entity.SnapToAnchorPose(localPosition);
+        }
+
+        private static UniTask DeployCard(
+            CardEntity entity,
+            Vector3 localPosition,
+            float moveDuration,
+            float flipDuration)
+        {
+            return entity.PlayDeployOnAnchorAsync(localPosition, moveDuration, flipDuration);
+        }
+
+        private static UniTask RealignCard(CardEntity entity, Vector3 localPosition, float moveDuration)
+        {
+            return entity.PlayRealignOnAnchorAsync(localPosition, moveDuration);
+        }
+
+        private async UniTask PlaceBattlefieldCardAsync(
+            BattleField field,
+            CardModel model,
+            CardEntity entity,
+            Vector3 localPosition,
+            bool isNewToBattlefield,
+            bool animate)
+        {
+            if (isNewToBattlefield)
+            {
+                if (animate)
+                {
+                    field?.MarkPendingBattlefieldDeploy(model);
+                    RefreshInputTargeting(field, model, entity);
+                    try
+                    {
+                        await DeployCard(entity, localPosition, layout.deployMoveDuration, layout.flipDuration);
+                    }
+                    finally
+                    {
+                        field?.ClearPendingBattlefieldDeploy(model);
+                        RefreshInputTargeting(field, model, entity);
+                    }
+                }
+                else
+                {
+                    SnapCard(entity, localPosition);
+                    SetEntityPhase(field, model, entity, CardBoardPhase.BattlefieldFaceUp);
+                }
+
+                return;
+            }
+
+            if (animate && !entity.IsAtHomeLocalPosition(localPosition))
+            {
+                await RealignCard(entity, localPosition, layout.deployMoveDuration);
+            }
+            else
+            {
+                SnapCard(entity, localPosition);
+            }
+
+            SetEntityPhase(field, model, entity, CardBoardPhase.BattlefieldFaceUp);
         }
 
         private async UniTask SpawnTeam(
+            BattleField field,
             CardModel[] battlefield,
             List<CardModel> reserve,
             Transform boardRoot,
@@ -194,7 +350,7 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var allModels = CollectModels(battlefield, reserve);
+            var allModels = FillModelBuffer(battlefield, reserve);
             for (var i = 0; i < allModels.Count; i++)
             {
                 if (!IsCurrentGeneration(generation))
@@ -205,20 +361,28 @@ namespace CardGame.CardBattle.Presentation
                 var model = allModels[i];
                 var placement = ResolvePlacement(zone, model, battlefield, reserve, boardRoot);
                 var entity = CreateEntity(model, placement.Parent, isPlayerTeam);
-                entities[model] = entity;
+                RegisterEntity(model, entity);
 
-                if (IsOnBattlefield(model, battlefield))
+                if (field.IsOnBattlefield(model))
                 {
-                    await DeployCard(entity, layout.deployMoveDuration, layout.flipDuration);
+                    await PlaceBattlefieldCardAsync(
+                        field,
+                        model,
+                        entity,
+                        placement.LocalPosition,
+                        isNewToBattlefield: true,
+                        animate: true);
                 }
                 else
                 {
                     await entity.SnapReserveOnAnchorAsync(placement.LocalPosition);
+                    RefreshInputTargeting(field, model, entity);
                 }
             }
         }
 
         private async UniTask SyncTeam(
+            BattleField field,
             CardModel[] battlefield,
             List<CardModel> reserve,
             Transform boardRoot,
@@ -232,18 +396,22 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var activeModels = CollectModels(battlefield, reserve);
-            var activeSet = new HashSet<CardModel>(activeModels);
-
-            foreach (var pair in entities)
+            var activeModels = FillModelBuffer(battlefield, reserve);
+            modelSetBuffer.Clear();
+            for (var i = 0; i < activeModels.Count; i++)
             {
-                var model = pair.Key;
-                if (model == null || model.IsPlayerTeam != isPlayerTeam || activeSet.Contains(model))
+                modelSetBuffer.Add(activeModels[i]);
+            }
+
+            foreach (var pair in boardSlots)
+            {
+                var model = pair.Value.Model;
+                if (model == null || model.IsPlayerTeam != isPlayerTeam || modelSetBuffer.Contains(model))
                 {
                     continue;
                 }
 
-                pair.Value.SetPhase(CardBoardPhase.Hidden);
+                SetEntityPhase(field, model, pair.Value.Entity, CardBoardPhase.Hidden);
             }
 
             for (var i = 0; i < activeModels.Count; i++)
@@ -254,38 +422,31 @@ namespace CardGame.CardBattle.Presentation
                 }
 
                 var model = activeModels[i];
-                if (!entities.TryGetValue(model, out var entity) || entity == null)
+                if (!TryGetEntity(model, out var entity))
                 {
                     continue;
                 }
 
-                entity.Bind(model);
+                entity.SyncFromModel(model);
+                RefreshInputTargeting(field, model, entity);
                 var placement = ResolvePlacement(zone, model, battlefield, reserve, boardRoot);
                 EnsureAnchorParent(entity, placement.Parent);
 
-                if (IsOnBattlefield(model, battlefield) && model.IsAlive)
+                if (field.IsOnBattlefield(model) && model.IsAlive)
                 {
-                    if (entity.Phase != CardBoardPhase.BattlefieldFaceUp)
-                    {
-                        if (animateRefill)
-                        {
-                            await DeployCard(entity, layout.deployMoveDuration, layout.flipDuration);
-                        }
-                        else
-                        {
-                            SnapCard(entity);
-                            entity.SetPhase(CardBoardPhase.BattlefieldFaceUp);
-                        }
-                    }
-                    else
-                    {
-                        SnapCard(entity);
-                        entity.SetPhase(CardBoardPhase.BattlefieldFaceUp);
-                    }
+                    var isNewToBattlefield = entity.Phase != CardBoardPhase.BattlefieldFaceUp;
+                    await PlaceBattlefieldCardAsync(
+                        field,
+                        model,
+                        entity,
+                        placement.LocalPosition,
+                        isNewToBattlefield,
+                        animateRefill);
                 }
                 else
                 {
                     await entity.SnapReserveOnAnchorAsync(placement.LocalPosition);
+                    RefreshInputTargeting(field, model, entity);
                 }
             }
 
@@ -294,10 +455,11 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            await EnsureEntitiesForTeam(battlefield, reserve, boardRoot, isPlayerTeam, animateRefill, generation);
+            await EnsureEntitiesForTeam(field, battlefield, reserve, boardRoot, isPlayerTeam, animateRefill, generation);
         }
 
         private async UniTask EnsureEntitiesForTeam(
+            BattleField field,
             CardModel[] battlefield,
             List<CardModel> reserve,
             Transform boardRoot,
@@ -316,7 +478,7 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var allModels = CollectModels(battlefield, reserve);
+            var allModels = FillModelBuffer(battlefield, reserve);
             for (var i = 0; i < allModels.Count; i++)
             {
                 if (!IsCurrentGeneration(generation))
@@ -325,31 +487,31 @@ namespace CardGame.CardBattle.Presentation
                 }
 
                 var model = allModels[i];
-                if (entities.ContainsKey(model))
+                if (HasEntity(model))
                 {
                     continue;
                 }
 
                 var placement = ResolvePlacement(zone, model, battlefield, reserve, boardRoot);
                 var entity = CreateEntity(model, placement.Parent, isPlayerTeam);
-                entities[model] = entity;
-                entity.Bind(model);
+                RegisterEntity(model, entity);
+                entity.SyncFromModel(model);
+                RefreshInputTargeting(field, model, entity);
 
-                if (IsOnBattlefield(model, battlefield))
+                if (field.IsOnBattlefield(model))
                 {
-                    if (animateRefill)
-                    {
-                        await DeployCard(entity, layout.deployMoveDuration, layout.flipDuration);
-                    }
-                    else
-                    {
-                        SnapCard(entity);
-                        entity.SetPhase(CardBoardPhase.BattlefieldFaceUp);
-                    }
+                    await PlaceBattlefieldCardAsync(
+                        field,
+                        model,
+                        entity,
+                        placement.LocalPosition,
+                        isNewToBattlefield: true,
+                        animate: animateRefill);
                 }
                 else
                 {
                     await entity.SnapReserveOnAnchorAsync(placement.LocalPosition);
+                    RefreshInputTargeting(field, model, entity);
                 }
             }
         }
@@ -373,13 +535,13 @@ namespace CardGame.CardBattle.Presentation
             {
                 Debug.LogError(
                     $"[CardBattle] {boardRoot.name}에 BattleBoardZoneLayout이 없습니다. "
-                    + "CardGame/CardBattle/Ensure Board Zone Anchors로 슬롯 앵커만 연결하세요.");
+                    + "CardGame/CardBattle/Ensure Board Zone Anchors로 전장 앵커를 연결하세요.");
                 return null;
             }
 
-            if (zone.SlotCount == 0)
+            if (zone.BattlefieldCenter == null)
             {
-                Debug.LogError($"[CardBattle] {boardRoot.name} 전장 슬롯 앵커가 비어 있습니다.");
+                Debug.LogError($"[CardBattle] {boardRoot.name} 전장 중심 앵커가 비어 있습니다.");
                 return null;
             }
 
@@ -390,11 +552,13 @@ namespace CardGame.CardBattle.Presentation
         {
             public readonly Transform Parent;
             public readonly Vector3 LocalPosition;
+            public readonly Quaternion LocalRotation;
 
-            public CardAnchorPlacement(Transform parent, Vector3 localPosition)
+            public CardAnchorPlacement(Transform parent, Vector3 localPosition, Quaternion localRotation)
             {
                 Parent = parent;
                 LocalPosition = localPosition;
+                LocalRotation = localRotation;
             }
         }
 
@@ -405,12 +569,13 @@ namespace CardGame.CardBattle.Presentation
             List<CardModel> reserve,
             Transform fallback)
         {
-            if (IsOnBattlefield(model, battlefield))
+            if (IsInBattlefieldSlots(model, battlefield)
+                && zone.TryComputeBattlefieldPose(model, battlefield, out var localPosition, out var localRotation))
             {
-                var slot = Mathf.Clamp(model.SlotIndex, 0, zone.SlotCount - 1);
                 return new CardAnchorPlacement(
-                    zone.GetBattlefieldSlotAnchor(slot) ?? fallback,
-                    Vector3.zero);
+                    zone.BattlefieldCenter != null ? zone.BattlefieldCenter : fallback,
+                    localPosition,
+                    localRotation);
             }
 
             var stackIndex = reserve.IndexOf(model);
@@ -421,7 +586,8 @@ namespace CardGame.CardBattle.Presentation
 
             return new CardAnchorPlacement(
                 zone.ReserveStackOrigin != null ? zone.ReserveStackOrigin : fallback,
-                zone.GetReserveStackLocalOffset(stackIndex));
+                zone.GetReserveStackLocalOffset(stackIndex),
+                Quaternion.identity);
         }
 
         private static void EnsureAnchorParent(CardEntity entity, Transform parent)
@@ -438,7 +604,8 @@ namespace CardGame.CardBattle.Presentation
         {
             var entity = Instantiate(layout.cardEntityPrefab, parent);
             entity.name = $"{(isPlayerTeam ? "Player" : "Enemy")}_{model.DisplayName}";
-            entity.Bind(model);
+            entity.ApplyLayout(layout);
+            entity.SyncFromModel(model);
             entity.ApplyBackSprite(layout.GetCardBack(isPlayerTeam));
             return entity;
         }
@@ -460,21 +627,21 @@ namespace CardGame.CardBattle.Presentation
                     continue;
                 }
 
-                if (entities.TryGetValue(model, out var entity) && entity.Phase == CardBoardPhase.BattlefieldFaceUp)
+                if (TryGetEntity(model, out var entity) && entity.Phase == CardBoardPhase.BattlefieldFaceUp)
                 {
                     inputHosts.Add(entity);
                 }
             }
         }
 
-        private static List<CardModel> CollectModels(CardModel[] battlefield, List<CardModel> reserve)
+        private List<CardModel> FillModelBuffer(CardModel[] battlefield, List<CardModel> reserve)
         {
-            var list = new List<CardModel>(battlefield.Length + reserve.Count);
+            modelBuffer.Clear();
             for (var i = 0; i < battlefield.Length; i++)
             {
                 if (battlefield[i] != null)
                 {
-                    list.Add(battlefield[i]);
+                    modelBuffer.Add(battlefield[i]);
                 }
             }
 
@@ -482,14 +649,14 @@ namespace CardGame.CardBattle.Presentation
             {
                 if (reserve[i] != null)
                 {
-                    list.Add(reserve[i]);
+                    modelBuffer.Add(reserve[i]);
                 }
             }
 
-            return list;
+            return modelBuffer;
         }
 
-        private static bool IsOnBattlefield(CardModel model, CardModel[] battlefield)
+        private static bool IsInBattlefieldSlots(CardModel model, CardModel[] battlefield)
         {
             for (var i = 0; i < battlefield.Length; i++)
             {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
 using UnityEngine;
 
@@ -7,13 +8,13 @@ namespace CardGame.CardBattle.Core
     /// <summary>카드 클릭·드래그 입력 추상화.</summary>
     public sealed class UnityInputProvider : IInputProvider
     {
-        private readonly System.Collections.Generic.List<ICardInputHost> boundHosts =
-            new System.Collections.Generic.List<ICardInputHost>();
+        private readonly List<ICardInputHost> boundHosts = new List<ICardInputHost>();
+        private readonly HashSet<ICardInputHost> boundHostSet = new HashSet<ICardInputHost>();
 
-        public event Action<CardModel> CardSelected;
-        public event Action<CardModel, Vector2> CardDragStarted;
-        public event Action<CardModel, CardModel, Vector2> CardDragMoved;
-        public event Action<CardModel, CardModel, Vector2> CardDragEnded;
+        public event Action<CardInstanceId> CardSelected;
+        public event Action<CardInstanceId, Vector2> CardDragStarted;
+        public event Action<CardInstanceId, CardInstanceId, Vector2> CardDragMoved;
+        public event Action<CardInstanceId, CardInstanceId, Vector2> CardDragEnded;
 
         public bool IsEnabled { get; private set; }
 
@@ -22,47 +23,47 @@ namespace CardGame.CardBattle.Core
             IsEnabled = enabled;
         }
 
-        public void NotifyCardSelected(CardModel card)
+        public void NotifyCardSelected(CardInstanceId cardId)
         {
-            if (!IsEnabled || card == null)
+            if (!IsEnabled || !cardId.IsValid)
             {
                 return;
             }
 
-            CardSelected?.Invoke(card);
+            CardSelected?.Invoke(cardId);
         }
 
-        public void NotifyCardDragStarted(CardModel source, Vector2 pointerPosition)
+        public void NotifyCardDragStarted(CardInstanceId sourceId, Vector2 pointerPosition)
         {
-            if (!IsEnabled || source == null)
+            if (!IsEnabled || !sourceId.IsValid)
             {
                 return;
             }
 
-            CardDragStarted?.Invoke(source, pointerPosition);
+            CardDragStarted?.Invoke(sourceId, pointerPosition);
         }
 
-        public void NotifyCardDragMoved(CardModel source, CardModel hoverTarget, Vector2 pointerPosition)
+        public void NotifyCardDragMoved(CardInstanceId sourceId, CardInstanceId hoverTargetId, Vector2 pointerPosition)
         {
-            if (!IsEnabled || source == null)
+            if (!IsEnabled || !sourceId.IsValid)
             {
                 return;
             }
 
-            CardDragMoved?.Invoke(source, hoverTarget, pointerPosition);
+            CardDragMoved?.Invoke(sourceId, hoverTargetId, pointerPosition);
         }
 
-        public void NotifyCardDragEnded(CardModel source, CardModel dropTarget, Vector2 pointerPosition)
+        public void NotifyCardDragEnded(CardInstanceId sourceId, CardInstanceId dropTargetId, Vector2 pointerPosition)
         {
-            if (!IsEnabled || source == null)
+            if (!IsEnabled || !sourceId.IsValid)
             {
                 return;
             }
 
-            CardDragEnded?.Invoke(source, dropTarget, pointerPosition);
+            CardDragEnded?.Invoke(sourceId, dropTargetId, pointerPosition);
         }
 
-        public void BindInputHosts(System.Collections.Generic.IReadOnlyList<ICardInputHost> hosts)
+        public void BindInputHosts(IReadOnlyList<ICardInputHost> hosts)
         {
             for (var i = 0; i < boundHosts.Count; i++)
             {
@@ -70,6 +71,7 @@ namespace CardGame.CardBattle.Core
             }
 
             boundHosts.Clear();
+            boundHostSet.Clear();
 
             if (hosts == null)
             {
@@ -79,7 +81,7 @@ namespace CardGame.CardBattle.Core
             for (var i = 0; i < hosts.Count; i++)
             {
                 var host = hosts[i];
-                if (host == null || boundHosts.Contains(host))
+                if (host == null || !boundHostSet.Add(host))
                 {
                     continue;
                 }
@@ -107,31 +109,40 @@ namespace CardGame.CardBattle.Core
 
         private void OnHostClicked(ICardInputHost host)
         {
-            if (host?.BoundModel != null)
+            if (host != null && host.InstanceId.IsValid)
             {
-                NotifyCardSelected(host.BoundModel);
+                NotifyCardSelected(host.InstanceId);
             }
         }
 
         private void OnHostDragStarted(ICardInputHost host, Vector2 pointerPosition)
         {
-            NotifyCardDragStarted(host?.BoundModel, pointerPosition);
+            if (host != null && host.InstanceId.IsValid)
+            {
+                NotifyCardDragStarted(host.InstanceId, pointerPosition);
+            }
         }
 
         private void OnHostDragMoved(ICardInputHost source, ICardInputHost hoveredHost, Vector2 pointerPosition)
         {
-            NotifyCardDragMoved(
-                source?.BoundModel,
-                hoveredHost?.BoundModel,
-                pointerPosition);
+            if (source == null || !source.InstanceId.IsValid)
+            {
+                return;
+            }
+
+            var hoverId = hoveredHost != null ? hoveredHost.InstanceId : default;
+            NotifyCardDragMoved(source.InstanceId, hoverId, pointerPosition);
         }
 
         private void OnHostDragEnded(ICardInputHost source, ICardInputHost dropHost, Vector2 pointerPosition)
         {
-            NotifyCardDragEnded(
-                source?.BoundModel,
-                dropHost?.BoundModel,
-                pointerPosition);
+            if (source == null || !source.InstanceId.IsValid)
+            {
+                return;
+            }
+
+            var dropId = dropHost != null ? dropHost.InstanceId : default;
+            NotifyCardDragEnded(source.InstanceId, dropId, pointerPosition);
         }
     }
 }

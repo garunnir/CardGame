@@ -14,7 +14,7 @@ namespace CardGame.CardBattle.Presentation
             }
 
             var collector = new PresentationModuleCollector();
-            context.Behavior.CollectPresentationModules(collector);
+            PresentationModuleFactory.CollectModules(context.Behavior, collector);
 
             for (var i = 0; i < collector.Modules.Count; i++)
             {
@@ -31,25 +31,27 @@ namespace CardGame.CardBattle.Presentation
             return new PresentationSequence(cues);
         }
 
-        public static PresentationSequence BuildTurnStartHeal(CardModel[] battlefield)
+        public static PresentationSequence BuildTurnStartHeal(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
             var cues = new List<PresentationCue> { new PresentationCue(PresentationCueKind.UiHealerBloom) };
 
-            if (battlefield == null)
+            if (healEvents == null || healEvents.Count == 0)
             {
                 return new PresentationSequence(cues);
             }
 
-            for (var i = 0; i < battlefield.Length; i++)
+            var seenHealers = new HashSet<CardModel>();
+            for (var i = 0; i < healEvents.Count; i++)
             {
-                var card = battlefield[i];
-                if (card == null || !card.IsAlive || card.CardType != CardType.Healer)
+                var healer = healEvents[i].Healer;
+                if (healer == null || !seenHealers.Add(healer))
                 {
                     continue;
                 }
 
-                cues.Add(new PresentationCue(PresentationCueKind.PlayTurnHealPresentation, subject: card));
-                break;
+                cues.Add(new PresentationCue(
+                    PresentationCueKind.PlayTurnHealPresentation,
+                    subjectId: healer.InstanceId));
             }
 
             return new PresentationSequence(cues);

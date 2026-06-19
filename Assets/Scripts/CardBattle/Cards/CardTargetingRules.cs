@@ -1,21 +1,25 @@
+using CardGame.CardBattle.Core;
+
 namespace CardGame.CardBattle.Cards
 {
-    /// <summary>전장 앞면 카드만 타겟·공격자로 쓸 수 있는지 판정.</summary>
+    /// <summary>전장 타겟·공격자 판정. BattleField 배치가 유일한 SSOT.</summary>
     public static class CardTargetingRules
     {
-        public static bool IsFaceUpBattlefieldCard(CardModel model, ICardBattleView view)
+        public static bool IsFaceUpBattlefieldCard(BattleField field, CardModel model)
         {
-            if (model == null || !model.IsAlive)
-            {
-                return false;
-            }
+            return field != null && field.IsTargetableOnBattlefield(model);
+        }
 
-            if (view is CardEntity entity)
-            {
-                return entity.Phase == CardBoardPhase.BattlefieldFaceUp;
-            }
+        public static bool CanBeginPlayerDrag(BattleField field, CardModel model)
+        {
+            return model != null
+                && model.IsPlayerTeam
+                && IsFaceUpBattlefieldCard(field, model);
+        }
 
-            return view != null;
+        public static bool CanAcceptBattlefieldTarget(BattleField field, CardModel model)
+        {
+            return IsFaceUpBattlefieldCard(field, model);
         }
     }
 }

@@ -87,13 +87,28 @@ namespace CardGame.CardBattle.Cards
     }
   }
 
+  public readonly struct TurnStartHealEvent
+  {
+    public TurnStartHealEvent(CardModel healer, CardModel target, int amount)
+    {
+      Healer = healer;
+      Target = target;
+      Amount = amount;
+    }
+
+    public CardModel Healer { get; }
+    public CardModel Target { get; }
+    public int Amount { get; }
+  }
+
   public static class TurnStartHealEffect
   {
-    public static void Apply(CardModel[] battlefield)
+    public static IReadOnlyList<TurnStartHealEvent> Apply(CardModel[] battlefield)
     {
+      var events = new List<TurnStartHealEvent>();
       if (battlefield == null)
       {
-        return;
+        return events;
       }
 
       for (var i = 0; i < battlefield.Length; i++)
@@ -119,9 +134,12 @@ namespace CardGame.CardBattle.Cards
           if (ally != null && ally.IsAlive)
           {
             ally.Heal(amount);
+            events.Add(new TurnStartHealEvent(card, ally, amount));
           }
         }
       }
+
+      return events;
     }
   }
 }

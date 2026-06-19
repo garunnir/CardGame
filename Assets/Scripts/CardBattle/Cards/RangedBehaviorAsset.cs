@@ -1,8 +1,6 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-using CardGame.CardBattle.Presentation;
-
 namespace CardGame.CardBattle.Cards
 {
     [CreateAssetMenu(fileName = "RangedBehavior", menuName = "CardGame/CardBattle/Behaviors/Ranged")]
@@ -28,12 +26,6 @@ namespace CardGame.CardBattle.Cards
         public override void CollectAttackModules(IAttackModuleCollector collector)
         {
             collector.AddPrimary(new PrimaryDamageModule(ap => ScalePrimaryDamage(ap.AttackPower)));
-        }
-
-        public override void CollectPresentationModules(IPresentationModuleCollector collector)
-        {
-            collector.Add(new RangedAttackPresentationModule(presentation.shootDuration));
-            collector.Add(new DefaultCameraShakePresentationModule());
         }
     }
 }

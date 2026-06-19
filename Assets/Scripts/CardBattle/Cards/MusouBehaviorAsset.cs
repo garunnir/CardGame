@@ -1,8 +1,6 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-using CardGame.CardBattle.Presentation;
-
 namespace CardGame.CardBattle.Cards
 {
     [CreateAssetMenu(fileName = "MusouBehavior", menuName = "CardGame/CardBattle/Behaviors/Musou")]
@@ -44,21 +42,6 @@ namespace CardGame.CardBattle.Cards
             collector.AddPrimary(new PrimaryDamageModule(ap => ScalePrimaryDamage(ap.AttackPower)));
             collector.AddCounter(new CounterAttackModule(receivesCounterAttack));
             collector.AddSecondary(new AdjacentSplashModule(this));
-        }
-
-        public override void CollectPresentationModules(IPresentationModuleCollector collector)
-        {
-            collector.Add(new MeleeAttackPresentationModule(
-                presentation.attackSfx,
-                presentation.attackVfxPrefab,
-                presentation.hitSfx,
-                presentation.hitVfxPrefab,
-                presentation.attackDashDuration,
-                0f));
-            collector.Add(new CounterPresentationModule());
-            collector.Add(new MusouSecondaryPresentationModule(
-                presentation.secondaryHitDelay,
-                presentation.secondaryCameraShake));
         }
     }
 }

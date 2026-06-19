@@ -17,12 +17,12 @@ namespace CardGame.CardBattle.Core
         [SerializeField] private UIManager uiManager;
         [SerializeField] private DragTargetingPresenter dragTargetingPresenter;
         [SerializeField] private CardBoardPresenter cardBoardPresenter;
-        [SerializeField] private float battlePresentationDelay = 0.55f;
 
         private BaseState currentState;
         private UnityInputProvider inputProvider = new UnityInputProvider();
         private CardPresentationService presentationService;
         private PresentationPlayer presentationPlayer;
+        private BattleOrchestrator battleOrchestrator;
 
         public BattleField Field { get; } = new BattleField();
         public IInputProvider InputProvider => inputProvider;
@@ -76,6 +76,11 @@ namespace CardGame.CardBattle.Core
         {
             presentationService = new CardPresentationService(audioAdapter);
             presentationPlayer = new PresentationPlayer();
+            battleOrchestrator = new BattleOrchestrator(
+                Field,
+                presentationPlayer,
+                presentationService,
+                ResolveAttackPresentationTailDelay());
         }
 
         /// <summary>로비/외부 덱 데이터로 전투 시작.</summary>
@@ -94,75 +99,33 @@ namespace CardGame.CardBattle.Core
         /// <summary>공격 연산 + 연출 + 사망/승패. true = 전투 계속.</summary>
         public async UniTask<bool> ExecuteBattleAsync(BattleActionRequest request)
         {
-            if (request.Attacker == null
-                || request.Target == null
-                || !request.Attacker.IsAlive
-                || !request.Target.IsAlive)
+            if (battleOrchestrator == null)
             {
-                return true;
+                battleOrchestrator = new BattleOrchestrator(
+                    Field,
+                    presentationPlayer,
+                    presentationService,
+                    ResolveAttackPresentationTailDelay());
             }
 
-            var enemyField = request.Attacker.IsPlayerTeam
-                ? Field.EnemyBattlefield
-                : Field.PlayerBattlefield;
-
-            var beforeAttackerHp = request.Attacker.CurrentHp;
-            var beforeTargetHp = request.Target.CurrentHp;
-            var resolution = BattleResolver.Plan(
-                request.Attacker,
-                request.Target,
-                enemyField);
-
-            var presentationContext = new PresentationContext(
+            var result = await battleOrchestrator.ExecuteAsync(
                 request,
-                resolution,
-                beforeAttackerHp,
-                beforeTargetHp,
-                FindView,
-                uiManager,
-                presentationService);
+                cardBoardPresenter,
+                uiManager);
 
-            var sequence = PresentationSequenceBuilder.BuildAttack(
-                presentationContext,
-                battlePresentationDelay);
+            RaiseBattleResolved(result.ActionResult);
 
-            BattleActionResult result;
             if (cardBoardPresenter != null)
             {
-                await cardBoardPresenter.RunExclusiveAsync(async () =>
-                {
-                    result = presentationPlayer != null
-                        ? await presentationPlayer.PlayAttackAsync(presentationContext, sequence)
-                        : BattleResolver.Apply(resolution, request.Attacker, request.Target);
-
-                    RaiseBattleResolved(result);
-
-                    Field.ProcessDeathsAndRefill(true);
-                    Field.ProcessDeathsAndRefill(false);
-                    await cardBoardPresenter.SyncBoardWithinLockAsync(Field, animateRefill: true);
-                });
-
                 RefreshBoardInput();
                 UpdateReserveUi();
-            }
-            else
-            {
-                result = presentationPlayer != null
-                    ? await presentationPlayer.PlayAttackAsync(presentationContext, sequence)
-                    : BattleResolver.Apply(resolution, request.Attacker, request.Target);
-
-                RaiseBattleResolved(result);
-
-                Field.ProcessDeathsAndRefill(true);
-                Field.ProcessDeathsAndRefill(false);
             }
 
             RaiseReserveChanged();
 
-            if (Field.IsTeamDefeated(true) || Field.IsTeamDefeated(false))
+            if (!result.ContinueBattle)
             {
-                var playerWin = Field.IsTeamDefeated(false);
-                ChangeState(new GameOverState(this, playerWin));
+                ChangeState(new GameOverState(this, result.PlayerWon));
                 return false;
             }
 
@@ -276,34 +239,49 @@ namespace CardGame.CardBattle.Core
                 Field.EnemyReserve.Count);
         }
 
-        public void RaiseHealerPulse()
+        public void RaiseHealerPulse(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
             OnHealerEffect?.Invoke();
-            var field = IsPlayerTurn ? Field.PlayerBattlefield : Field.EnemyBattlefield;
-            PlayTurnStartPresentationAsync(field).Forget();
+            PlayTurnStartPresentationAsync(healEvents).Forget();
         }
 
-        private async UniTaskVoid PlayTurnStartPresentationAsync(CardModel[] battlefield)
+        private async UniTaskVoid PlayTurnStartPresentationAsync(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
+            ICardViewRegistry viewRegistry = cardBoardPresenter;
             if (presentationPlayer == null)
             {
-                presentationService?.PlayHealForTeam(battlefield, FindView);
+                presentationService?.PlayHealFromEvents(healEvents, FindView);
                 return;
             }
 
-            var sequence = PresentationSequenceBuilder.BuildTurnStartHeal(battlefield);
+            var sequence = PresentationSequenceBuilder.BuildTurnStartHeal(healEvents);
             await presentationPlayer.PlayTurnStartAsync(
                 sequence,
                 uiManager,
                 presentationService,
-                FindView);
+                viewRegistry);
         }
 
-        public ICardBattleView FindView(CardModel model)
+        public ICardBattleView FindView(CardInstanceId id)
         {
-            return cardBoardPresenter != null
-                ? cardBoardPresenter.FindView(model)
-                : null;
+            if (cardBoardPresenter != null && cardBoardPresenter.TryGetView(id, out var view))
+            {
+                return view;
+            }
+
+            return null;
+        }
+
+        public bool TryGetModel(CardInstanceId id, out CardModel model)
+        {
+            model = null;
+            return cardBoardPresenter != null && cardBoardPresenter.TryGetModel(id, out model);
+        }
+
+        private float ResolveAttackPresentationTailDelay()
+        {
+            var layout = cardBoardPresenter != null ? cardBoardPresenter.Layout : null;
+            return layout != null ? layout.attackPresentationTailDelay : 0.55f;
         }
 
         private static List<CardDataAsset> SanitizeDeck(List<CardDataAsset> deck, string teamPrefix)

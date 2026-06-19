@@ -18,3 +18,10 @@ MonoBehaviour:
   enemyCardBack: {fileID: 0}
   deployMoveDuration: 0.45
   flipDuration: 0.4
+  attackPresentationTailDelay: 0.55
+  attackDashDistance: 0.55
+  attackDashDuration: 0.2
+  hpChangeDuration: 0.35
+  deathVisualDuration: 0.35
+  hoverValidColor: {r: 0.55, g: 1, b: 0.6, a: 1}
+  hoverInvalidColor: {r: 1, g: 0.45, b: 0.45, a: 1}

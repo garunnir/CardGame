@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Core;
 
 namespace CardGame.CardBattle.Presentation
 {
@@ -13,23 +14,26 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var resolution = context.Resolution;
-            var targetLethal = context.BeforeTargetHp <= resolution.PrimaryDamage;
+            var outcome = context.Outcome;
 
-            if (targetLethal)
+            if (outcome.LethalTarget != null)
             {
-                cues.Add(new PresentationCue(PresentationCueKind.PlayDeathPresentation, subject: context.Target));
+                cues.Add(new PresentationCue(
+                    PresentationCueKind.PlayDeathPresentation,
+                    subjectId: outcome.LethalTarget.InstanceId));
             }
-            else if (resolution.CounterDamage > 0
-                     && context.BeforeAttackerHp <= resolution.CounterDamage)
+            else if (outcome.LethalAttacker != null)
             {
-                cues.Add(new PresentationCue(PresentationCueKind.PlayDeathPresentation, subject: context.Attacker));
+                cues.Add(new PresentationCue(
+                    PresentationCueKind.PlayDeathPresentation,
+                    subjectId: outcome.LethalAttacker.InstanceId));
             }
 
-            var secondary = resolution.Secondary;
-            if (secondary.HasTarget && secondary.Target.CurrentHp <= secondary.Damage)
+            if (outcome.LethalSecondary != null)
             {
-                cues.Add(new PresentationCue(PresentationCueKind.PlayDeathPresentation, subject: secondary.Target));
+                cues.Add(new PresentationCue(
+                    PresentationCueKind.PlayDeathPresentation,
+                    subjectId: outcome.LethalSecondary.InstanceId));
             }
         }
     }

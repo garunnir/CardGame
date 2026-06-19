@@ -1,10 +1,11 @@
 using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Core;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace CardGame.CardBattle.Presentation
 {
-    /// <summary>씬 앵커 — 위치·회전은 Inspector에서 직접 지정. 런타임은 identity 로컬만 적용.</summary>
+    /// <summary>씬 앵커 — 전장은 중심+간격으로 런타임 정렬, 대기열은 스택 원점.</summary>
     public sealed class BattleBoardZoneLayout : MonoBehaviour
     {
         [BoxGroup("팀")]
@@ -12,10 +13,15 @@ namespace CardGame.CardBattle.Presentation
         [SerializeField] private bool isPlayerTeam = true;
 
         [BoxGroup("전장", centerLabel: true)]
-        [LabelText("슬롯 앵커")]
+        [LabelText("중심 앵커")]
         [Required]
-        [ValidateInput(nameof(HasBattlefieldSlots), "전장 슬롯 앵커가 필요합니다.")]
-        [SerializeField] private Transform[] battlefieldSlots;
+        [ValidateInput(nameof(HasBattlefieldCenter), "전장 중심 앵커가 필요합니다.")]
+        [SerializeField] private Transform battlefieldCenter;
+
+        [BoxGroup("전장")]
+        [LabelText("카드 간격")]
+        [Min(0f)]
+        [SerializeField] private float cardSpacing = 1.2f;
 
         [BoxGroup("대기열", centerLabel: true)]
         [LabelText("스택 원점")]
@@ -26,22 +32,13 @@ namespace CardGame.CardBattle.Presentation
         [LabelText("스택 간격 (StackOrigin 로컬)")]
         [SerializeField] private Vector3 reserveStackOffset;
 
-        public int SlotCount => battlefieldSlots != null ? battlefieldSlots.Length : 0;
-
         public bool IsPlayerTeam => isPlayerTeam;
 
+        public Transform BattlefieldCenter => battlefieldCenter;
+
+        public float CardSpacing => cardSpacing;
+
         public Transform ReserveStackOrigin => reserveStackOrigin;
-
-        public Transform GetBattlefieldSlotAnchor(int slotIndex)
-        {
-            if (battlefieldSlots == null || battlefieldSlots.Length == 0)
-            {
-                return null;
-            }
-
-            var index = Mathf.Clamp(slotIndex, 0, battlefieldSlots.Length - 1);
-            return battlefieldSlots[index];
-        }
 
         /// <summary>StackOrigin 로컬 오프셋 — 앵커 회전을 따름.</summary>
         public Vector3 GetReserveStackLocalOffset(int stackIndex)
@@ -49,33 +46,76 @@ namespace CardGame.CardBattle.Presentation
             return reserveStackOffset * Mathf.Max(0, stackIndex);
         }
 
-        public void Configure(
-            bool playerTeam,
-            Transform[] slots,
-            Transform reserveOrigin)
+        public bool TryComputeBattlefieldPose(
+            CardModel model,
+            CardModel[] battlefield,
+            out Vector3 localPosition,
+            out Quaternion localRotation)
         {
-            isPlayerTeam = playerTeam;
-            battlefieldSlots = slots;
-            reserveStackOrigin = reserveOrigin;
+            localPosition = Vector3.zero;
+            localRotation = Quaternion.identity;
+
+            if (battlefieldCenter == null || model == null || battlefield == null)
+            {
+                return false;
+            }
+
+            var displayIndex = -1;
+            var aliveCount = 0;
+            for (var i = 0; i < battlefield.Length; i++)
+            {
+                var card = battlefield[i];
+                if (card == null || !card.IsAlive)
+                {
+                    continue;
+                }
+
+                if (card == model)
+                {
+                    displayIndex = aliveCount;
+                }
+
+                aliveCount++;
+            }
+
+            if (displayIndex < 0)
+            {
+                return false;
+            }
+
+            var offset = (displayIndex - (aliveCount - 1) * 0.5f) * cardSpacing;
+            localPosition = Vector3.right * offset;
+            return true;
         }
 
-        private bool HasBattlefieldSlots => battlefieldSlots != null && battlefieldSlots.Length > 0;
+        public void Configure(
+            bool playerTeam,
+            Transform center,
+            Transform reserveOrigin,
+            float spacing = 1.2f)
+        {
+            isPlayerTeam = playerTeam;
+            battlefieldCenter = center;
+            reserveStackOrigin = reserveOrigin;
+            cardSpacing = spacing;
+        }
+
+        private bool HasBattlefieldCenter => battlefieldCenter != null;
 
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
-            if (battlefieldSlots != null)
+            if (battlefieldCenter != null)
             {
                 Gizmos.color = new Color(0.2f, 0.85f, 0.35f, 0.85f);
-                for (var i = 0; i < battlefieldSlots.Length; i++)
+                var maxCards = BattleField.SlotCount;
+                for (var i = 0; i < maxCards; i++)
                 {
-                    var anchor = battlefieldSlots[i];
-                    if (anchor == null)
-                    {
-                        continue;
-                    }
-
-                    BattleBoardGizmos.DrawFlatCardRect(anchor);
+                    var offset = (i - (maxCards - 1) * 0.5f) * cardSpacing;
+                    var localPos = Vector3.right * offset;
+                    BattleBoardGizmos.DrawFlatCardRect(
+                        battlefieldCenter,
+                        battlefieldCenter.TransformPoint(localPos));
                 }
             }
 

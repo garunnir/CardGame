@@ -1,16 +1,18 @@
 using System;
+using CardGame.CardBattle.Core;
 using UnityEngine;
 
 namespace CardGame.CardBattle.Cards
 {
-    /// <summary>전투 연출·바인딩에 필요한 카드 뷰 계약 (uGUI / 3D 공용).</summary>
+    /// <summary>전투 연출에 필요한 카드 뷰 계약 — CardModel 참조 없음.</summary>
     public interface ICardBattleView
     {
-        CardModel BoundModel { get; }
+        CardInstanceId InstanceId { get; }
         Transform ViewTransform { get; }
 
-        void Bind(CardModel model);
+        void Bind(CardViewState state);
         void RefreshHpInstant();
+        void SetHpDisplay(int hp);
         void PlayHpChange(int fromHp, int toHp, Action onComplete = null);
         void PlayAttackDash(
             Vector3 worldTarget,

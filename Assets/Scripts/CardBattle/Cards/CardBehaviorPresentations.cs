@@ -33,13 +33,13 @@ namespace CardGame.CardBattle.Cards
 
         [FoldoutGroup("모션")]
         [LabelText("돌진 시간")]
-        [Tooltip("0이면 CardView 기본값")]
+        [Tooltip("0이면 CardEntity 기본값")]
         [Min(0f)]
         public float attackDashDuration;
 
         [FoldoutGroup("모션")]
         [LabelText("피격 셰이크 강도")]
-        [Tooltip("0이면 CardView 기본값")]
+        [Tooltip("0이면 CardEntity 기본값")]
         [Min(0f)]
         public float hitShakeStrength;
     }

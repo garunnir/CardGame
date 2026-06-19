@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
 using Cysharp.Threading.Tasks;
@@ -7,33 +8,28 @@ namespace CardGame.CardBattle.Presentation
 {
     public sealed class PresentationPlayer
     {
-        public async UniTask<BattleActionResult> PlayAttackAsync(
+        public async UniTask PlayAttackAsync(
             PresentationContext context,
             PresentationSequence sequence)
         {
             if (context == null || sequence == null)
             {
-                return default;
+                return;
             }
+
+            PrepareHpDisplays(context, sequence);
 
             for (var i = 0; i < sequence.Cues.Count; i++)
             {
                 await ExecuteCueAsync(context, sequence.Cues[i]);
             }
-
-            return new BattleActionResult(
-                context.Attacker,
-                context.Target,
-                context.AppliedPrimaryDamage,
-                context.AppliedCounterDamage,
-                context.AppliedSecondary);
         }
 
         public async UniTask PlayTurnStartAsync(
             PresentationSequence sequence,
             CardGame.CardBattle.UI.UIManager ui,
             CardPresentationService presentation,
-            Func<CardModel, ICardBattleView> findView)
+            ICardViewRegistry viewRegistry)
         {
             if (sequence == null)
             {
@@ -42,7 +38,26 @@ namespace CardGame.CardBattle.Presentation
 
             for (var i = 0; i < sequence.Cues.Count; i++)
             {
-                await ExecuteTurnCueAsync(sequence.Cues[i], ui, presentation, findView);
+                await ExecuteTurnCueAsync(sequence.Cues[i], ui, presentation, viewRegistry);
+            }
+        }
+
+        private static void PrepareHpDisplays(PresentationContext context, PresentationSequence sequence)
+        {
+            var prepared = new HashSet<int>();
+            for (var i = 0; i < sequence.Cues.Count; i++)
+            {
+                var cue = sequence.Cues[i];
+                if (cue.Kind != PresentationCueKind.HpBarTween
+                    || !cue.SubjectId.IsValid
+                    || cue.HpFrom < 0
+                    || !prepared.Add(cue.SubjectId.Value))
+                {
+                    continue;
+                }
+
+                var view = context.GetView(cue.SubjectId);
+                view?.SetHpDisplay(cue.HpFrom);
             }
         }
 
@@ -50,7 +65,7 @@ namespace CardGame.CardBattle.Presentation
             PresentationCue cue,
             CardGame.CardBattle.UI.UIManager ui,
             CardPresentationService presentation,
-            Func<CardModel, ICardBattleView> findView)
+            ICardViewRegistry viewRegistry)
         {
             switch (cue.Kind)
             {
@@ -59,7 +74,13 @@ namespace CardGame.CardBattle.Presentation
                     break;
 
                 case PresentationCueKind.PlayTurnHealPresentation:
-                    presentation?.PlayTurnHeal(cue.Subject, findView?.Invoke(cue.Subject));
+                    if (viewRegistry != null
+                        && viewRegistry.TryGetModel(cue.SubjectId, out var healer))
+                    {
+                        viewRegistry.TryGetView(cue.SubjectId, out var view);
+                        presentation?.PlayTurnHeal(healer, view);
+                    }
+
                     break;
 
                 case PresentationCueKind.Wait:
@@ -84,58 +105,43 @@ namespace CardGame.CardBattle.Presentation
                 case PresentationCueKind.PlayAttackPresentation:
                     context.Presentation?.PlayAttack(
                         context.Attacker,
-                        context.FindView(context.Attacker));
+                        context.GetView(context.Attacker.InstanceId));
                     break;
 
                 case PresentationCueKind.PlayShootPresentation:
                     context.Presentation?.PlayAttack(
                         context.Attacker,
-                        context.FindView(context.Attacker));
+                        context.GetView(context.Attacker.InstanceId));
                     break;
 
                 case PresentationCueKind.AttackDash:
                     await PlayAttackDashAsync(context, cue.Duration);
                     break;
 
-                case PresentationCueKind.ApplyPrimaryDamage:
-                    ApplyPrimaryDamage(context);
-                    break;
-
                 case PresentationCueKind.PlayHitPresentation:
                     context.Presentation?.PlayHit(
                         context.Attacker,
-                        context.FindView(context.Target));
+                        context.GetView(context.Target.InstanceId));
                     break;
 
                 case PresentationCueKind.HitShake:
-                    await PlayHitShakeAsync(context.FindView(context.Target), cue.FloatParam);
+                    await PlayHitShakeAsync(context.GetView(context.Target.InstanceId), cue.FloatParam);
                     break;
 
                 case PresentationCueKind.HpBarTween:
-                    await PlayHpBarTweenAsync(
-                        context.FindView(cue.Subject),
-                        cue.Subject,
-                        GetBeforeHp(context, cue.Subject));
+                    await PlayHpBarTweenAsync(context.GetView(cue.SubjectId), cue.HpFrom, cue.HpTo);
                     break;
 
                 case PresentationCueKind.PlayCounterPresentation:
                     context.Presentation?.PlayCounter(
                         context.Attacker,
-                        context.FindView(context.Attacker));
-                    break;
-
-                case PresentationCueKind.ApplyCounterDamage:
-                    ApplyCounterDamage(context);
+                        context.GetView(context.Attacker.InstanceId));
                     break;
 
                 case PresentationCueKind.PlaySecondaryHitPresentation:
                     context.Presentation?.PlayMusouSecondaryHit(
                         context.Attacker,
-                        context.FindView(cue.Subject));
-                    break;
-
-                case PresentationCueKind.ApplySecondaryDamage:
-                    ApplySecondaryDamage(context);
+                        context.GetView(cue.SubjectId));
                     break;
 
                 case PresentationCueKind.CameraShake:
@@ -143,7 +149,7 @@ namespace CardGame.CardBattle.Presentation
                     break;
 
                 case PresentationCueKind.PlayDeathPresentation:
-                    await PlayDeathPresentationAsync(context, cue.Subject);
+                    await PlayDeathPresentationAsync(context, cue.SubjectId);
                     break;
 
                 default:
@@ -151,13 +157,12 @@ namespace CardGame.CardBattle.Presentation
             }
         }
 
-        private async UniTask PlayAttackDashAsync(PresentationContext context, float dashDuration)
+        private static async UniTask PlayAttackDashAsync(PresentationContext context, float dashDuration)
         {
-            var attackerView = context.FindView(context.Attacker);
-            var targetView = context.FindView(context.Target);
+            var attackerView = context.GetView(context.Attacker.InstanceId);
+            var targetView = context.GetView(context.Target.InstanceId);
             if (attackerView == null || targetView == null)
             {
-                ApplyPrimaryDamage(context);
                 return;
             }
 
@@ -165,7 +170,7 @@ namespace CardGame.CardBattle.Presentation
             attackerView.PlayAttackDash(
                 targetView.ViewTransform.position,
                 dashDuration,
-                () => ApplyPrimaryDamage(context),
+                null,
                 () => tcs.TrySetResult());
             await tcs.Task;
         }
@@ -182,26 +187,26 @@ namespace CardGame.CardBattle.Presentation
             await tcs.Task;
         }
 
-        private static async UniTask PlayHpBarTweenAsync(ICardBattleView view, CardModel model, int beforeHp)
+        private static async UniTask PlayHpBarTweenAsync(ICardBattleView view, int fromHp, int toHp)
         {
-            if (view == null || model == null)
+            if (view == null || fromHp < 0 || toHp < 0)
             {
                 return;
             }
 
             var tcs = new UniTaskCompletionSource();
-            view.PlayHpChange(beforeHp, model.CurrentHp, () => tcs.TrySetResult());
+            view.PlayHpChange(fromHp, toHp, () => tcs.TrySetResult());
             await tcs.Task;
         }
 
-        private static async UniTask PlayDeathPresentationAsync(PresentationContext context, CardModel subject)
+        private static async UniTask PlayDeathPresentationAsync(PresentationContext context, CardInstanceId subjectId)
         {
-            if (subject == null || subject.IsAlive)
+            if (!subjectId.IsValid || !context.ViewRegistry.TryGetModel(subjectId, out var subject))
             {
                 return;
             }
 
-            var view = context.FindView(subject);
+            var view = context.GetView(subjectId);
             context.Presentation?.PlayDeath(subject, view);
             if (view == null)
             {
@@ -211,68 +216,6 @@ namespace CardGame.CardBattle.Presentation
             var tcs = new UniTaskCompletionSource();
             view.PlayDeathVisual(() => tcs.TrySetResult());
             await tcs.Task;
-        }
-
-        private static int GetBeforeHp(PresentationContext context, CardModel subject)
-        {
-            if (subject == context.Attacker)
-            {
-                return context.BeforeAttackerHp;
-            }
-
-            if (subject == context.Target)
-            {
-                return context.BeforeTargetHp;
-            }
-
-            if (context.Resolution.Secondary.HasTarget
-                && subject == context.Resolution.Secondary.Target)
-            {
-                return subject.CurrentHp + context.Resolution.Secondary.Damage;
-            }
-
-            return subject.CurrentHp;
-        }
-
-        private static void ApplyPrimaryDamage(PresentationContext context)
-        {
-            if (context.AppliedPrimaryDamage > 0)
-            {
-                return;
-            }
-
-            var damage = context.Resolution.PrimaryDamage;
-            if (damage <= 0)
-            {
-                return;
-            }
-
-            context.Target.ApplyDamage(damage);
-            context.AppliedPrimaryDamage = damage;
-        }
-
-        private static void ApplyCounterDamage(PresentationContext context)
-        {
-            if (context.Resolution.CounterDamage <= 0 || !context.Target.IsAlive)
-            {
-                return;
-            }
-
-            var damage = context.Resolution.CounterDamage;
-            context.Attacker.ApplyDamage(damage);
-            context.AppliedCounterDamage = damage;
-        }
-
-        private static void ApplySecondaryDamage(PresentationContext context)
-        {
-            var secondary = context.Resolution.Secondary;
-            if (!secondary.HasTarget)
-            {
-                return;
-            }
-
-            secondary.Target.ApplyDamage(secondary.Damage);
-            context.AppliedSecondary = secondary;
         }
     }
 }

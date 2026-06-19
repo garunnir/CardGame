@@ -183,25 +183,17 @@ namespace CardGame.CardBattle.Editor
                 zone = zoneRoot.gameObject.AddComponent<BattleBoardZoneLayout>();
             }
 
-            var slotsRoot = GetOrCreateChild(zoneRoot, "BattlefieldSlots", out var slotsRootCreated);
-            if (slotsRootCreated)
+            var slotsRoot = zoneRoot.Find("BattlefieldSlots");
+            if (slotsRoot != null)
             {
-                slotsRoot.localPosition = Vector3.zero;
-                slotsRoot.localRotation = Quaternion.identity;
+                UnityEngine.Object.DestroyImmediate(slotsRoot.gameObject);
             }
 
-            var slots = new Transform[BattleField.SlotCount];
-            for (var i = 0; i < slots.Length; i++)
+            var center = GetOrCreateChild(zoneRoot, "BattlefieldCenter", out var centerCreated);
+            if (centerCreated)
             {
-                var slotName = $"Slot_{i}";
-                var slot = GetOrCreateChild(slotsRoot, slotName, out var slotCreated);
-                if (slotCreated)
-                {
-                    slot.localPosition = Vector3.zero;
-                    slot.localRotation = Quaternion.identity;
-                }
-
-                slots[i] = slot;
+                center.localPosition = Vector3.zero;
+                center.localRotation = Quaternion.identity;
             }
 
             var reserveRoot = GetOrCreateChild(zoneRoot, "Reserve", out var reserveRootCreated);
@@ -218,7 +210,7 @@ namespace CardGame.CardBattle.Editor
                 stackOrigin.localRotation = Quaternion.identity;
             }
 
-            zone.Configure(isPlayerTeam, slots, stackOrigin);
+            zone.Configure(isPlayerTeam, center, stackOrigin);
             EditorUtility.SetDirty(zone);
             return zone;
         }

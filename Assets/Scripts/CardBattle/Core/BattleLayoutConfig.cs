@@ -10,7 +10,7 @@ namespace CardGame.CardBattle.Core
 
 {
 
-    /// <summary>카드 프리팹·팀별 비주얼·배치 연출 파라미터. 슬롯 위치는 씬 BattleBoardZoneLayout.</summary>
+    /// <summary>카드 프리팹·팀별 비주얼·배치 연출 파라미터. 전장 위치는 씬 BattleBoardZoneLayout 중심+간격.</summary>
 
     [CreateAssetMenu(fileName = "BattleLayout", menuName = "CardGame/CardBattle/Battle Layout")]
 
@@ -25,26 +25,6 @@ namespace CardGame.CardBattle.Core
         [Required]
 
         public CardEntity cardEntityPrefab;
-
-
-
-        [BoxGroup("규칙")]
-
-        [LabelText("전장 슬롯 수")]
-
-        [Min(1)]
-
-        public int battlefieldSlotCount = BattleField.SlotCount;
-
-
-
-        [BoxGroup("규칙")]
-
-        [LabelText("최소 덱 크기")]
-
-        [ShowInInspector, ReadOnly]
-
-        public int MinDeckSize => battlefieldSlotCount * 2;
 
 
 
@@ -84,6 +64,76 @@ namespace CardGame.CardBattle.Core
 
 
 
+        [BoxGroup("연출")]
+
+        [LabelText("공격 연출 tail")]
+
+        [Tooltip("공격 시퀀스 마지막 대기 시간")]
+
+        [Min(0f)]
+
+        public float attackPresentationTailDelay = 0.55f;
+
+
+
+        [BoxGroup("연출")]
+
+        [LabelText("공격 돌진 거리")]
+
+        [Min(0f)]
+
+        public float attackDashDistance = 0.55f;
+
+
+
+        [BoxGroup("연출")]
+
+        [LabelText("공격 돌진 시간")]
+
+        [Tooltip("행동 SO가 0이면 이 값 사용")]
+
+        [Min(0f)]
+
+        public float attackDashDuration = 0.2f;
+
+
+
+        [BoxGroup("연출")]
+
+        [LabelText("HP 변화 연출 시간")]
+
+        [Min(0.05f)]
+
+        public float hpChangeDuration = 0.35f;
+
+
+
+        [BoxGroup("연출")]
+
+        [LabelText("사망 연출 시간")]
+
+        [Min(0.05f)]
+
+        public float deathVisualDuration = 0.35f;
+
+
+
+        [BoxGroup("입력")]
+
+        [LabelText("호버 — 유효")]
+
+        public Color hoverValidColor = new Color(0.55f, 1f, 0.6f, 1f);
+
+
+
+        [BoxGroup("입력")]
+
+        [LabelText("호버 — 무효")]
+
+        public Color hoverInvalidColor = new Color(1f, 0.45f, 0.45f, 1f);
+
+
+
         public Sprite GetCardBack(bool isPlayerTeam)
 
         {
@@ -95,5 +145,4 @@ namespace CardGame.CardBattle.Core
     }
 
 }
-
 

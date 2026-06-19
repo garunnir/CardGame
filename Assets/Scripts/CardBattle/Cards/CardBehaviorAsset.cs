@@ -1,4 +1,3 @@
-using CardGame.CardBattle.Presentation;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -21,7 +20,5 @@ namespace CardGame.CardBattle.Cards
         public abstract CardType StrategyType { get; }
 
         public abstract void CollectAttackModules(IAttackModuleCollector collector);
-
-        public abstract void CollectPresentationModules(IPresentationModuleCollector collector);
     }
 }

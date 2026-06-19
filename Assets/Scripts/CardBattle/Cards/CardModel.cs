@@ -1,10 +1,13 @@
 using System;
+using CardGame.CardBattle.Core;
 
 namespace CardGame.CardBattle.Cards
 {
     /// <summary>런타임 카드 인스턴스. CardDataAsset에서 복사 생성.</summary>
     public sealed class CardModel
     {
+        private static int nextInstanceId = 1;
+
         public CardModel(CardDataAsset source, bool isPlayerTeam, int slotIndex)
         {
             if (source == null)
@@ -12,6 +15,7 @@ namespace CardGame.CardBattle.Cards
                 throw new ArgumentNullException(nameof(source));
             }
 
+            InstanceId = new CardInstanceId(nextInstanceId++);
             Data = source;
             CardId = source.cardId;
             DisplayName = source.displayName;
@@ -21,6 +25,7 @@ namespace CardGame.CardBattle.Cards
             SlotIndex = slotIndex;
         }
 
+        public CardInstanceId InstanceId { get; }
         public CardDataAsset Data { get; }
         public string CardId { get; }
         public string DisplayName { get; }

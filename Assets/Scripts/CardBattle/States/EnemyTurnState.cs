@@ -25,10 +25,10 @@ namespace CardGame.CardBattle.States
         {
             Context.IsPlayerTurn = false;
             Context.InputProvider.SetEnabled(false);
-            TurnStartHealEffect.Apply(Context.Field.EnemyBattlefield);
+            var healEvents = TurnStartHealEffect.Apply(Context.Field.EnemyBattlefield);
             await Context.SyncAllViewsAsync();
             Context.RaiseTurnBanner(false);
-            Context.RaiseHealerPulse();
+            Context.RaiseHealerPulse(healEvents);
             await RunEnemyTurnAsync();
         }
 

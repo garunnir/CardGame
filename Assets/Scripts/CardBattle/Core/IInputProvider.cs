@@ -1,22 +1,21 @@
 using System;
-using CardGame.CardBattle.Cards;
 using UnityEngine;
 
 namespace CardGame.CardBattle.Core
 {
-    /// <summary>터치/클릭 입력 추상화.</summary>
+    /// <summary>터치/클릭 입력 추상화 — 카드는 CardInstanceId로 식별.</summary>
     public interface IInputProvider
     {
-        event Action<CardModel> CardSelected;
-        event Action<CardModel, Vector2> CardDragStarted;
-        event Action<CardModel, CardModel, Vector2> CardDragMoved;
-        event Action<CardModel, CardModel, Vector2> CardDragEnded;
+        event Action<CardInstanceId> CardSelected;
+        event Action<CardInstanceId, Vector2> CardDragStarted;
+        event Action<CardInstanceId, CardInstanceId, Vector2> CardDragMoved;
+        event Action<CardInstanceId, CardInstanceId, Vector2> CardDragEnded;
         bool IsEnabled { get; }
 
         void SetEnabled(bool enabled);
-        void NotifyCardSelected(CardModel card);
-        void NotifyCardDragStarted(CardModel source, Vector2 pointerPosition);
-        void NotifyCardDragMoved(CardModel source, CardModel hoverTarget, Vector2 pointerPosition);
-        void NotifyCardDragEnded(CardModel source, CardModel dropTarget, Vector2 pointerPosition);
+        void NotifyCardSelected(CardInstanceId cardId);
+        void NotifyCardDragStarted(CardInstanceId sourceId, Vector2 pointerPosition);
+        void NotifyCardDragMoved(CardInstanceId sourceId, CardInstanceId hoverTargetId, Vector2 pointerPosition);
+        void NotifyCardDragEnded(CardInstanceId sourceId, CardInstanceId dropTargetId, Vector2 pointerPosition);
     }
 }

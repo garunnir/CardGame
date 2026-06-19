@@ -1,6 +1,6 @@
 namespace CardGame.CardBattle.Core
 {
-    /// <summary>Inspector/Resources 폴백용 기본 덱 카드 ID.</summary>
+    /// <summary>기본 덱 카드 ID 단일 진실원. Bridge Inspector 배열은 테스트용 오버라이드.</summary>
     public static class DefaultDeckCatalog
     {
         public static readonly string[] PlayerCardIds =

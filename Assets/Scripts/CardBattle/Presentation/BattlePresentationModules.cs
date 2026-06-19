@@ -1,45 +1,34 @@
 using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Core;
 using UnityEngine;
 
 namespace CardGame.CardBattle.Presentation
 {
     public sealed class MeleeAttackPresentationModule : IPresentationModule
     {
-        private readonly AudioClip attackSfx;
-        private readonly GameObject attackVfxPrefab;
-        private readonly AudioClip hitSfx;
-        private readonly GameObject hitVfxPrefab;
         private readonly float attackDashDuration;
         private readonly float hitShakeStrength;
 
-        public MeleeAttackPresentationModule(
-            AudioClip attackSfx,
-            GameObject attackVfxPrefab,
-            AudioClip hitSfx,
-            GameObject hitVfxPrefab,
-            float attackDashDuration,
-            float hitShakeStrength)
+        public MeleeAttackPresentationModule(float attackDashDuration, float hitShakeStrength)
         {
-            this.attackSfx = attackSfx;
-            this.attackVfxPrefab = attackVfxPrefab;
-            this.hitSfx = hitSfx;
-            this.hitVfxPrefab = hitVfxPrefab;
             this.attackDashDuration = attackDashDuration;
             this.hitShakeStrength = hitShakeStrength;
         }
 
         public void CollectCues(PresentationContext context, IList<PresentationCue> cues)
         {
+            var targetId = context.Target.InstanceId;
             cues.Add(new PresentationCue(PresentationCueKind.PlayAttackPresentation));
             cues.Add(new PresentationCue(PresentationCueKind.UiAttackBloom));
             cues.Add(new PresentationCue(PresentationCueKind.AttackDash, attackDashDuration));
-            cues.Add(new PresentationCue(PresentationCueKind.ApplyPrimaryDamage));
             cues.Add(new PresentationCue(PresentationCueKind.PlayHitPresentation));
             cues.Add(new PresentationCue(PresentationCueKind.HitShake, floatParam: hitShakeStrength));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
-                subject: context.Target));
+                subjectId: targetId,
+                hpFrom: context.Snapshot.GetBeforeHp(targetId),
+                hpTo: context.Snapshot.GetAfterHp(targetId)));
         }
     }
 
@@ -54,15 +43,17 @@ namespace CardGame.CardBattle.Presentation
 
         public void CollectCues(PresentationContext context, IList<PresentationCue> cues)
         {
+            var targetId = context.Target.InstanceId;
             cues.Add(new PresentationCue(PresentationCueKind.PlayShootPresentation));
             cues.Add(new PresentationCue(PresentationCueKind.UiAttackBloom));
             cues.Add(new PresentationCue(PresentationCueKind.Wait, shootDuration > 0f ? shootDuration : 0.35f));
-            cues.Add(new PresentationCue(PresentationCueKind.ApplyPrimaryDamage));
             cues.Add(new PresentationCue(PresentationCueKind.PlayHitPresentation));
             cues.Add(new PresentationCue(PresentationCueKind.HitShake));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
-                subject: context.Target));
+                subjectId: targetId,
+                hpFrom: context.Snapshot.GetBeforeHp(targetId),
+                hpTo: context.Snapshot.GetAfterHp(targetId)));
         }
     }
 
@@ -75,11 +66,13 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
+            var attackerId = context.Attacker.InstanceId;
             cues.Add(new PresentationCue(PresentationCueKind.PlayCounterPresentation));
-            cues.Add(new PresentationCue(PresentationCueKind.ApplyCounterDamage));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
-                subject: context.Attacker));
+                subjectId: attackerId,
+                hpFrom: context.Snapshot.GetBeforeHp(attackerId),
+                hpTo: context.Snapshot.GetAfterHp(attackerId)));
         }
     }
 
@@ -101,16 +94,18 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
+            var secondaryId = context.Resolution.Secondary.Target.InstanceId;
             cues.Add(new PresentationCue(
                 PresentationCueKind.WaitBeforeSecondary,
                 secondaryHitDelay > 0f ? secondaryHitDelay : 0.15f));
             cues.Add(new PresentationCue(
                 PresentationCueKind.PlaySecondaryHitPresentation,
-                subject: context.Resolution.Secondary.Target));
-            cues.Add(new PresentationCue(PresentationCueKind.ApplySecondaryDamage));
+                subjectId: secondaryId));
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
-                subject: context.Resolution.Secondary.Target));
+                subjectId: secondaryId,
+                hpFrom: context.Snapshot.GetBeforeHp(secondaryId),
+                hpTo: context.Snapshot.GetAfterHp(secondaryId)));
             cues.Add(new PresentationCue(
                 PresentationCueKind.CameraShake,
                 floatParam: secondaryCameraShake));

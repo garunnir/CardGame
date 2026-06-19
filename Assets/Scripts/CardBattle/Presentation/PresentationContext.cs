@@ -1,4 +1,3 @@
-using System;
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
 using CardGame.CardBattle.UI;
@@ -9,35 +8,44 @@ namespace CardGame.CardBattle.Presentation
     {
         public PresentationContext(
             BattleActionRequest request,
-            AttackResolution resolution,
-            int beforeAttackerHp,
-            int beforeTargetHp,
-            Func<CardModel, ICardBattleView> findView,
+            AttackOutcome outcome,
+            AttackPresentationSnapshot snapshot,
+            BattleActionResult actionResult,
+            ICardViewRegistry viewRegistry,
             UIManager ui,
             CardPresentationService presentation)
         {
             Request = request;
-            Resolution = resolution;
-            BeforeAttackerHp = beforeAttackerHp;
-            BeforeTargetHp = beforeTargetHp;
-            FindView = findView;
+            Outcome = outcome;
+            Snapshot = snapshot;
+            ActionResult = actionResult;
+            ViewRegistry = viewRegistry;
             Ui = ui;
             Presentation = presentation;
         }
 
         public BattleActionRequest Request { get; }
-        public AttackResolution Resolution { get; }
+        public AttackOutcome Outcome { get; }
+        public AttackPresentationSnapshot Snapshot { get; }
+        public BattleActionResult ActionResult { get; }
+        public AttackResolution Resolution => Outcome.Resolution;
         public CardModel Attacker => Request.Attacker;
         public CardModel Target => Request.Target;
         public CardBehaviorAsset Behavior => Attacker.Behavior;
-        public int BeforeAttackerHp { get; }
-        public int BeforeTargetHp { get; }
-        public Func<CardModel, ICardBattleView> FindView { get; }
+        public int BeforeAttackerHp => Outcome.BeforeAttackerHp;
+        public int BeforeTargetHp => Outcome.BeforeTargetHp;
+        public ICardViewRegistry ViewRegistry { get; }
         public UIManager Ui { get; }
         public CardPresentationService Presentation { get; }
 
-        public int AppliedPrimaryDamage { get; set; }
-        public int AppliedCounterDamage { get; set; }
-        public SecondaryStrikeResult AppliedSecondary { get; set; }
+        public ICardBattleView GetView(CardInstanceId id)
+        {
+            return ViewRegistry != null && ViewRegistry.TryGetView(id, out var view) ? view : null;
+        }
+
+        public CardModel GetModel(CardInstanceId id)
+        {
+            return ViewRegistry != null && ViewRegistry.TryGetModel(id, out var model) ? model : null;
+        }
     }
 }

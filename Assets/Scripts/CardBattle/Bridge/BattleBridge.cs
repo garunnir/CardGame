@@ -90,7 +90,7 @@ namespace CardGame.CardBattle.Bridge
                 }
             }
 
-            if (!RuntimeDeckFactory.IsDeckValid(list))
+            if (list.Count == 0 || !RuntimeDeckFactory.IsDeckValid(list))
             {
                 return LoadDeckFromResources(teamPrefix);
             }

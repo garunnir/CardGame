@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using CardGame.CardBattle.Bridge;
+using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Core;
 using UnityEngine;
 
-namespace CardGame.CardBattle.Cards
+namespace CardGame.CardBattle.Presentation
 {
     /// <summary>타입별 behavior presentation 기반 SFX/VFX 재생.</summary>
     public sealed class CardPresentationService
@@ -115,25 +118,25 @@ namespace CardGame.CardBattle.Cards
             }
         }
 
-        public void PlayHealForTeam(CardModel[] battlefield, Func<CardModel, ICardBattleView> findView)
+        public void PlayHealFromEvents(
+            IReadOnlyList<TurnStartHealEvent> healEvents,
+            Func<CardInstanceId, ICardBattleView> findView)
         {
-            if (battlefield == null)
+            if (healEvents == null || healEvents.Count == 0)
             {
                 return;
             }
 
-            for (var i = 0; i < battlefield.Length; i++)
+            var seenHealers = new HashSet<CardModel>();
+            for (var i = 0; i < healEvents.Count; i++)
             {
-                var card = battlefield[i];
-                if (card == null || !card.IsAlive || !(card.Behavior is HealerBehaviorAsset healer))
+                var healer = healEvents[i].Healer;
+                if (healer == null || !seenHealers.Add(healer))
                 {
                     continue;
                 }
 
-                audio?.PlaySfx(healer.presentation.turnHealSfx);
-                var view = findView != null ? findView(card) : null;
-                PlayTurnHeal(card, view);
-                return;
+                PlayTurnHeal(healer, findView != null ? findView(healer.InstanceId) : null);
             }
         }
 
