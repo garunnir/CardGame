@@ -10,7 +10,7 @@ CardBattle 모듈의 런타임 구조·데이터 흐름·레이어 경계를 정
 | `CardGame.CardBattle` | 런타임 전체 (논리 폴더로 레이어 분리) |
 | `CardGame.CardBattle.Editor` | 씬/보드/behavior 셋업 메뉴 |
 
-물리 asmdef 분리(Domain / Presentation / View)는 **미적용**. 단일 asmdef로 컴파일 순환은 없으나, 논리적 Core → Presentation → Cards → Core 의존이 존재합니다.
+물리 asmdef 분리(Core / Presentation / View)는 **미적용·보류**. 모듈 단위 asmdef(`CardGame.CardBattle`, `CardGame.CardBattle.Editor`)는 이미 존재하며, 레이어 쪼개기는 규모 대비 ROI가 낮아 선택 사항.
 
 ---
 
@@ -56,6 +56,7 @@ CardBattle 모듈의 런타임 구조·데이터 흐름·레이어 경계를 정
 | 표시 데이터 | `CardModel` (HP, 이름, 행동) | `CardViewState` DTO |
 | 전장 앞면·타겟 | `BattleField.IsTargetableOnBattlefield` | `CardBoardPhase` (표시만) + `ApplyInputTargeting` (presenter가 field 규칙 반영) |
 | HP 연출 | `BattleCommandExecutor` 선적용 | `PresentationPlayer` / `SetHpDisplay` |
+| 보드 배치 | `BattleField` 슬롯·reserve | `CardEntity.ApplyPlacement` (reparent·보간) |
 
 `CardEntity`는 `CardModel` 참조를 **보유하지 않음**. `SyncFromModel`은 `CardViewState.FromModel`만 바인딩합니다.
 
@@ -98,8 +99,23 @@ CardEntity (ICardInputHost, InstanceId)
 ## 보드·배치
 
 - **위치 SSOT**: 씬 `BattleBoardZoneLayout` (`battlefieldCenter` + `cardSpacing` 직선 정렬)
-- **타이밍 SSOT**: `BattleLayoutConfig` (deploy/flip/dash/hp/death/hover/tail)
-- **엔티티 인덱스**: `CardBoardPresenter.boardSlots` (`CardInstanceId` → `Model` + `Entity`)
+- **타이밍 SSOT**: `BattleLayoutConfig` (deploy/flip/dash/hp/death/hover/tail) — `CardEntity.ApplyLayout`로 주입
+- **엔티티 인덱스**: `CardBoardEntityRegistry` (`CardInstanceId` → `Model` + `Entity`)
+
+### 배치 파이프라인 (Presenter → View)
+
+```
+CardBoardPlacement.ResolvePlacement  →  AnchorPlacement (parent, local pose)
+  → CardBoardDeployer.PlaceBattlefieldCardAsync / PlaceReserveCardAsync
+  → CardEntity.ApplyPlacement(parent, pose, phase, animate)
+```
+
+- **Presenter**: 목표 앵커·`CardBoardPhase`·`animate`만 전달. `pendingBattlefieldDeploy` 마킹/해제는 `CardBoardDeployer`만.
+- **View**: `ApplyPlacement`가 reparent(`worldPositionStays: true`)·보간(로컬/월드 이동·플립) SSOT.
+- **리필(deck→전장)**: reserve 출발 deploy는 **월드 좌표** 이동 + 플립.
+- **팀 sync**: 플레이어 → 적 **순차** 실행. 팀별 모델 버퍼는 `CardBoardTeamOps` **로컬** (공유 buffer 금지).
+
+전투 연출(`PlayHpChange`, `PlayAttackDash` 등)은 `ICardBattleView` 경로이며, 배치와 분리됩니다.
 
 ### 배치 연출 vs 타겟팅
 
@@ -125,7 +141,7 @@ CardEntity (ICardInputHost, InstanceId)
 
 ---
 
-## 리팩터링 현황 (2025-06 감사)
+## 리팩터링 현황 (2025-06 감사 · 2026-06 갱신)
 
 ### 완료된 항목
 
@@ -137,25 +153,28 @@ CardEntity (ICardInputHost, InstanceId)
 - `BattleField.IsTargetableOnBattlefield` + `pendingBattlefieldDeploy`
 - **타겟팅 SSOT**: `CardTargetingRules(BattleField)` → `CardEntity.ApplyInputTargeting` (presenter 갱신)
 - `MeleeAttackPresentationModule` — cue 타이밍만 (SFX/VFX는 `CardPresentationService`)
+- `CardBoardPresenter` → `EntityRegistry` / `Placement` / `Deployer` / `TeamOps` / `InputTargeting` 분할 (~230줄 오케스트레이터)
+- `IBattleContext` — FSM이 `GameManager` concrete 대신 인터페이스 사용
+- **보드 배치 View SSOT**: `CardEntity.ApplyPlacement` → `CardBoardMotion` (`ICardBoardMotion`)
+- **전투 연출 View**: `CardCombatMotion` (`ICardBattleView` 메서드 위임)
+- `ICardMotionHost` — motion 드라이버용 내부 호스트 계약
+- 덱 리필 연출: world deploy, 팀 순차 sync, 로컬 model buffer
+- 레거시 배치 API 제거 (`PlayDeploy*`, `SnapReserve*`, `EnsureAnchorParent`)
+- `CardEntity.Motion` Coroutine → UniTask (HP/dash/shake 폴백)
+- **P1** `CardEntity` motion 분리: `CardBoardMotion` / `CardCombatMotion` + `ICardBoardMotion`
+- `UIManager` 턴 배너 fade Coroutine → UniTask
 
-### 추가 라운드 필요: **선택 (P2 위주)**
+### 남은 항목 (선택)
 
 | 우선순위 | 항목 | 이유 |
 |----------|------|------|
-| **P1** | `CardEntity` (~800줄 partial) | motion/input/뷰 단일 MonoBehaviour |
-| **P2** | asmdef 레이어 분리 | 논리 경계 컴파일 강제 (승인 후) |
-| **P2** | `CardEntity.Motion` Coroutine → UniTask | tech-stack 정책 정합 |
-
-### 완료 (이번 라운드)
-
-- `CardBoardPresenter` → `EntityRegistry` / `Placement` / `Deployer` / `TeamOps` / `InputTargeting` 분할 (~230줄 오케스트레이터)
-- `IBattleContext` — FSM이 `GameManager` concrete 대신 인터페이스 사용
+| **P3** | 초기 3장 덱 뽑기 연출 | UX 요청 시 (`SpawnTeam` reserve 선배치) |
+| **P3** | `CardBoardDeployer` → `TeamOps` 합치기 | ~60줄, 선택적 정리 |
 
 ### 권장 다음 라운드 순서
 
-1. `CardEntity` motion → 별 컴포넌트 또는 `ICardMotionView`
-2. asmdef 논리 분리 (승인 시)
-3. `CardEntity.Motion` Coroutine → UniTask
+1. 게임 기능·연출 (덱 뽑기 연출 등 UX)
+2. 소규모 정리 (`CardBoardDeployer` 합치기) — 필요 시만
 
 ---
 
@@ -165,6 +184,10 @@ CardEntity (ICardInputHost, InstanceId)
 Assets/Scripts/CardBattle/
 ├── Bridge/          # 씬 진입·오디오
 ├── Cards/           # Model, SO, CardEntity, targeting rules
+│   ├── CardBoardMotion.cs         # 보드 배치 motion
+│   ├── CardCombatMotion.cs        # 전투 연출 motion
+│   ├── ICardBoardMotion.cs
+│   └── ICardMotionHost.cs (internal)
 ├── Core/            # Field, FSM hub, resolver, orchestrator, layout SO
 ├── Input/           # Drag line, contracts
 ├── Presentation/    # Board, player, cues, modules
@@ -193,4 +216,6 @@ Assets/Scripts/CardBattle/
 - [ ] 연출이 `CardModel` 직접 참조 대신 `CardInstanceId` / snapshot 사용하는가
 - [ ] 새 타겟 규칙이 `BattleField.IsTargetableOnBattlefield`와 일치하는가
 - [ ] 배치 연출 추가 시 `pendingBattlefieldDeploy` 마킹/해제하는가
+- [ ] 보드 배치 보간이 Presenter가 아닌 `CardEntity.ApplyPlacement`에 있는가
+- [ ] 팀 sync가 공유 buffer 없이 순차·로컬 buffer로 동작하는가
 - [ ] 연출 타이밍이 `BattleLayoutConfig`에 있는가 (GameManager SerializeField 금지)

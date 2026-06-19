@@ -1,5 +1,6 @@
 using System;
-using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -25,6 +26,7 @@ namespace CardGame.CardBattle.UI
         [SerializeField] private float bloomAttackIntensity = 1.2f;
 
         private float defaultBloomIntensity = 0.4f;
+        private CancellationTokenSource bannerFadeCts;
         public event Action RestartRequested;
 
         private void Awake()
@@ -37,6 +39,18 @@ namespace CardGame.CardBattle.UI
 
             HideResultPanels();
             CacheBloomDefault();
+        }
+
+        private void OnDestroy()
+        {
+            bannerFadeCts?.Cancel();
+            bannerFadeCts?.Dispose();
+            bannerFadeCts = null;
+
+            if (restartButton != null)
+            {
+                restartButton.onClick.RemoveListener(OnRestartClicked);
+            }
         }
 
         public void ApplySortingOrder(int order = -1)
@@ -62,28 +76,41 @@ namespace CardGame.CardBattle.UI
             if (turnBannerGroup != null)
             {
                 turnBannerGroup.alpha = 0f;
-                StartCoroutine(FadeBannerRoutine(isPlayerTurn));
+                bannerFadeCts?.Cancel();
+                bannerFadeCts?.Dispose();
+                bannerFadeCts = new CancellationTokenSource();
+                FadeBannerAsync(bannerFadeCts.Token).Forget();
             }
         }
 
-        private IEnumerator FadeBannerRoutine(bool isPlayerTurn)
+        private async UniTaskVoid FadeBannerAsync(CancellationToken token)
         {
             const float duration = 0.35f;
-            var elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                turnBannerGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / duration);
-                yield return null;
-            }
 
-            yield return new WaitForSeconds(0.8f);
-            elapsed = 0f;
-            while (elapsed < duration)
+            try
             {
-                elapsed += Time.deltaTime;
-                turnBannerGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
-                yield return null;
+                var elapsed = 0f;
+                while (elapsed < duration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    turnBannerGroup.alpha = Mathf.Lerp(0f, 1f, elapsed / duration);
+                    await UniTask.Yield(token);
+                }
+
+                await UniTask.Delay(TimeSpan.FromSeconds(0.8f), cancellationToken: token);
+
+                elapsed = 0f;
+                while (elapsed < duration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    turnBannerGroup.alpha = Mathf.Lerp(1f, 0f, elapsed / duration);
+                    await UniTask.Yield(token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
         }
 

@@ -24,7 +24,8 @@ namespace CardGame.CardBattle.Presentation
 
             try
             {
-                await entity.ApplyPlacement(
+                ICardBoardMotion motion = entity;
+                await motion.ApplyPlacement(
                     placement.Parent,
                     placement.LocalPosition,
                     placement.LocalRotation,
@@ -49,7 +50,8 @@ namespace CardGame.CardBattle.Presentation
             CardBoardPlacement.AnchorPlacement placement,
             bool animate)
         {
-            await entity.ApplyPlacement(
+            ICardBoardMotion motion = entity;
+            await motion.ApplyPlacement(
                 placement.Parent,
                 placement.LocalPosition,
                 placement.LocalRotation,

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using CardGame.CardBattle.Core;
 using CardGame.CardBattle.Input;
 using DG.Tweening;
@@ -19,6 +20,7 @@ namespace CardGame.CardBattle.Cards
     /// <summary>3D 카드 엔티티 — 앞/뒤 쿼드, 배치 플립, 드래그 타겟팅. 히트는 ShakeRoot 콜라이더.</summary>
     public sealed partial class CardEntity : MonoBehaviour,
         ICardBattleView,
+        ICardBoardMotion,
         ICardInputHost,
         IDragSource,
         IDropTarget,
@@ -56,7 +58,8 @@ namespace CardGame.CardBattle.Cards
         private bool canBeginDragInput;
         private bool canAcceptTargetInput;
         private CardBoardPhase phase = CardBoardPhase.Hidden;
-        private Coroutine hpCoroutine;
+        private CardBoardMotion boardMotion;
+        private CardCombatMotion combatMotion;
 
         private bool IsMotionValid => this != null && shakeRoot != null;
 
@@ -106,10 +109,14 @@ namespace CardGame.CardBattle.Cards
             {
                 useDotween = false;
             }
+
+            boardMotion = new CardBoardMotion(this);
+            combatMotion = new CardCombatMotion(this);
         }
 
         private void OnDestroy()
         {
+            combatMotion?.Dispose();
             transform.DOKill();
             if (shakeRoot != null && shakeRoot != transform)
             {
