@@ -163,12 +163,13 @@ CardBoardPlacement.ResolvePlacement  →  AnchorPlacement (parent, local pose)
 - `CardEntity.Motion` Coroutine → UniTask (HP/dash/shake 폴백)
 - **P1** `CardEntity` motion 분리: `CardBoardMotion` / `CardCombatMotion` + `ICardBoardMotion`
 - `UIManager` 턴 배너 fade Coroutine → UniTask
+- 초기 스폰: 전 카드 덱 스택 배치 후 전장 3장 순차 deploy
+- 카드 면: `CardFace_Default` 불투명·`Cull Back` (양면 스프라이트 머티리얼 제거)
 
 ### 남은 항목 (선택)
 
 | 우선순위 | 항목 | 이유 |
 |----------|------|------|
-| **P3** | 초기 3장 덱 뽑기 연출 | UX 요청 시 (`SpawnTeam` reserve 선배치) |
 | **P3** | `CardBoardDeployer` → `TeamOps` 합치기 | ~60줄, 선택적 정리 |
 
 ### 권장 다음 라운드 순서

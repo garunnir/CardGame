@@ -23,16 +23,23 @@ namespace CardGame.CardBattle.States
 
         private async UniTaskVoid EnterAsync()
         {
-            Context.IsPlayerTurn = false;
+            var generation = Context.StateGeneration;
             Context.InputProvider.SetEnabled(false);
-            var healEvents = TurnStartHealEffect.Apply(Context.Field.EnemyBattlefield);
-            await Context.SyncAllViewsAsync();
-            Context.RaiseTurnBanner(false);
-            Context.RaiseHealerPulse(healEvents);
-            await RunEnemyTurnAsync();
+            await TurnStartFlow.RunAsync(
+                Context,
+                Context.Field.EnemyBattlefield,
+                isPlayerTurn: false,
+                generation);
+
+            if (!IsTransitionCurrent(generation))
+            {
+                return;
+            }
+
+            await RunEnemyTurnAsync(generation);
         }
 
-        private async UniTask RunEnemyTurnAsync()
+        private async UniTask RunEnemyTurnAsync(int generation)
         {
             if (running)
             {
@@ -42,7 +49,8 @@ namespace CardGame.CardBattle.States
             running = true;
             try
             {
-                if (Context.CurrentStateId == BattleFlowStateId.GameOver)
+                if (!IsTransitionCurrent(generation)
+                    || Context.CurrentStateId == BattleFlowStateId.GameOver)
                 {
                     return;
                 }
@@ -54,7 +62,7 @@ namespace CardGame.CardBattle.States
                 if (actions.Count > 0)
                 {
                     var finished = await Context.ExecuteBattleAsync(actions[0]);
-                    if (!finished)
+                    if (!finished || !IsTransitionCurrent(generation))
                     {
                         return;
                     }
@@ -64,7 +72,8 @@ namespace CardGame.CardBattle.States
             {
                 running = false;
 
-                if (Context.CurrentStateId != BattleFlowStateId.GameOver)
+                if (IsTransitionCurrent(generation)
+                    && Context.CurrentStateId != BattleFlowStateId.GameOver)
                 {
                     Context.ChangeState(new PlayerTurnState(Context));
                 }

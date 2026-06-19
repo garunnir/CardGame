@@ -26,12 +26,19 @@ namespace CardGame.CardBattle.States
 
         private async UniTaskVoid EnterAsync()
         {
-            Context.IsPlayerTurn = true;
-            var healEvents = TurnStartHealEffect.Apply(Context.Field.PlayerBattlefield);
-            await Context.SyncAllViewsAsync();
+            var generation = Context.StateGeneration;
+            await TurnStartFlow.RunAsync(
+                Context,
+                Context.Field.PlayerBattlefield,
+                isPlayerTurn: true,
+                generation);
+
+            if (!IsTransitionCurrent(generation))
+            {
+                return;
+            }
+
             Context.InputProvider.SetEnabled(true);
-            Context.RaiseTurnBanner(true);
-            Context.RaiseHealerPulse(healEvents);
             Context.InputProvider.CardSelected -= OnCardSelected;
             Context.InputProvider.CardSelected += OnCardSelected;
             Context.InputProvider.CardDragStarted -= OnCardDragStarted;
@@ -61,7 +68,6 @@ namespace CardGame.CardBattle.States
         private void SelectAttacker(CardInstanceId attackerId, CardModel attacker)
         {
             selectedAttackerId = attackerId;
-            Context.RaiseAttackerSelected(attacker);
         }
 
         private void OnCardSelected(CardInstanceId cardId)

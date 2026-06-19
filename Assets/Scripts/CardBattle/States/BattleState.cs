@@ -22,9 +22,11 @@ namespace CardGame.CardBattle.States
 
         private async UniTaskVoid ResolveAsync()
         {
+            var generation = Context.StateGeneration;
             await Context.ExecuteBattleAsync(Context.PendingAction);
 
-            if (Context.CurrentStateId == BattleFlowStateId.GameOver)
+            if (!IsTransitionCurrent(generation)
+                || Context.CurrentStateId == BattleFlowStateId.GameOver)
             {
                 return;
             }

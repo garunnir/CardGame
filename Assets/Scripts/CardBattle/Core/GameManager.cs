@@ -19,6 +19,7 @@ namespace CardGame.CardBattle.Core
         [SerializeField] private CardBoardPresenter cardBoardPresenter;
 
         private BaseState currentState;
+        private int stateGeneration;
         private UnityInputProvider inputProvider = new UnityInputProvider();
         private CardPresentationService presentationService;
         private PresentationPlayer presentationPlayer;
@@ -35,14 +36,9 @@ namespace CardGame.CardBattle.Core
         public BattleActionRequest PendingAction { get; set; }
         public bool IsPlayerTurn { get; set; }
         public BattleFlowStateId CurrentStateId => currentState?.StateId ?? BattleFlowStateId.Init;
+        public int StateGeneration => stateGeneration;
 
         public Action<bool> OnBattleResult { get; set; }
-        public Action<bool> OnTurnChanged;
-        public Action<CardModel> OnAttackerSelected;
-        public Action<BattleActionResult> OnBattleResolvedEvent;
-        public Action<bool> OnGameOverEvent;
-        public Action OnReserveCountChanged;
-        public Action OnHealerEffect;
         public DragTargetingPresenter DragTargetingPresenter => dragTargetingPresenter;
 
         private void Awake()
@@ -116,12 +112,9 @@ namespace CardGame.CardBattle.Core
                 cardBoardPresenter,
                 uiManager);
 
-            RaiseBattleResolved(result.ActionResult);
-
             if (cardBoardPresenter != null)
             {
                 RefreshBoardInput();
-                UpdateReserveUi();
             }
 
             RaiseReserveChanged();
@@ -137,10 +130,13 @@ namespace CardGame.CardBattle.Core
 
         public void ChangeState(BaseState nextState)
         {
+            stateGeneration++;
             currentState?.Exit();
             currentState = nextState;
             currentState.Enter();
         }
+
+        public bool IsStateGenerationCurrent(int generation) => generation == stateGeneration;
 
         public UniTask BuildBoardViewsAsync()
         {
@@ -182,21 +178,6 @@ namespace CardGame.CardBattle.Core
             UpdateReserveUi();
         }
 
-        public void BuildBoardViews()
-        {
-            BuildBoardViewsAsync().Forget();
-        }
-
-        public void SyncBoardViews(bool animateRefill = false)
-        {
-            SyncBoardViewsAsync(animateRefill).Forget();
-        }
-
-        public void SyncAllViews()
-        {
-            SyncAllViewsAsync().Forget();
-        }
-
         private void RefreshBoardInput()
         {
             if (cardBoardPresenter != null)
@@ -214,37 +195,21 @@ namespace CardGame.CardBattle.Core
 
         public void RaiseTurnBanner(bool isPlayerTurn)
         {
-            OnTurnChanged?.Invoke(isPlayerTurn);
             uiManager?.ShowTurnBanner(isPlayerTurn);
-        }
-
-        public void RaiseAttackerSelected(CardModel card)
-        {
-            OnAttackerSelected?.Invoke(card);
-        }
-
-        public void RaiseBattleResolved(BattleActionResult result)
-        {
-            OnBattleResolvedEvent?.Invoke(result);
         }
 
         public void RaiseGameOver(bool playerWin)
         {
-            OnGameOverEvent?.Invoke(playerWin);
             uiManager?.ShowResultPopup(playerWin);
         }
 
         public void RaiseReserveChanged()
         {
-            OnReserveCountChanged?.Invoke();
-            uiManager?.UpdateReserveCounts(
-                Field.PlayerReserve.Count,
-                Field.EnemyReserve.Count);
+            UpdateReserveUi();
         }
 
         public void RaiseHealerPulse(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
-            OnHealerEffect?.Invoke();
             PlayTurnStartPresentationAsync(healEvents).Forget();
         }
 

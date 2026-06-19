@@ -19,6 +19,8 @@ namespace CardGame.CardBattle.Core
 
         protected IBattleContext Context { get; }
 
+        protected bool IsTransitionCurrent(int generation) => Context.IsStateGenerationCurrent(generation);
+
         public abstract BattleFlowStateId StateId { get; }
 
         public virtual void Enter()

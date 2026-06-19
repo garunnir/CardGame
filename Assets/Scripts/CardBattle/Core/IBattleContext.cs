@@ -17,12 +17,14 @@ namespace CardGame.CardBattle.Core
         BattleActionRequest PendingAction { get; set; }
         bool IsPlayerTurn { get; set; }
         BattleFlowStateId CurrentStateId { get; }
+        int StateGeneration { get; }
 
         DragTargetingPresenter DragTargetingPresenter { get; }
 
         Action<bool> OnBattleResult { get; set; }
 
         void ChangeState(BaseState nextState);
+        bool IsStateGenerationCurrent(int generation);
 
         UniTask BuildBoardViewsAsync();
         UniTask SyncAllViewsAsync();
@@ -31,7 +33,6 @@ namespace CardGame.CardBattle.Core
         void RaiseTurnBanner(bool isPlayerTurn);
         void RaiseHealerPulse(IReadOnlyList<TurnStartHealEvent> healEvents);
         void RaiseReserveChanged();
-        void RaiseAttackerSelected(CardModel card);
         void RaiseGameOver(bool playerWin);
 
         ICardBattleView FindView(CardInstanceId id);

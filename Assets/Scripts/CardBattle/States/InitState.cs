@@ -18,10 +18,17 @@ namespace CardGame.CardBattle.States
 
         private async UniTaskVoid EnterAsync()
         {
+            var generation = Context.StateGeneration;
             Context.Field.Clear();
             Context.Field.DeployInitial(Context.PlayerDeckData, true);
             Context.Field.DeployInitial(Context.EnemyDeckData, false);
             await Context.BuildBoardViewsAsync();
+
+            if (!IsTransitionCurrent(generation))
+            {
+                return;
+            }
+
             Context.RaiseReserveChanged();
             Context.ChangeState(new PlayerTurnState(Context));
         }

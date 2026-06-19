@@ -74,6 +74,14 @@ namespace CardGame.CardBattle.Presentation
                 stackIndex = 0;
             }
 
+            return ResolveReserveStackPlacement(zone, stackIndex, fallback);
+        }
+
+        public static AnchorPlacement ResolveReserveStackPlacement(
+            BattleBoardZoneLayout zone,
+            int stackIndex,
+            Transform fallback)
+        {
             return new AnchorPlacement(
                 zone.ReserveStackOrigin != null ? zone.ReserveStackOrigin : fallback,
                 zone.GetReserveStackLocalOffset(stackIndex),

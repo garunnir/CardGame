@@ -15,7 +15,8 @@ namespace CardGame.CardBattle.Editor
         public const string PrefabPath = "Assets/Prefabs/CardBattle/CardEntity.prefab";
         public const string LayoutPath = "Assets/Resources/CardBattle/BattleLayout_Default.asset";
         public const string CardFaceMaterialPath = "Assets/Materials/CardBattle/CardFace_Default.mat";
-        private const string DefaultSpriteMaterialGuid = "9dfc825aed78fcd4ba02077103263b40";
+        public const string CardFaceShaderPath = "Assets/Shaders/CardBattle/CardFaceUnlit.shader";
+        private const float CardFaceAlphaCutoff = 0.5f;
 
         private static Mesh builtinQuad;
 
@@ -364,24 +365,23 @@ namespace CardGame.CardBattle.Editor
 
         private static Material EnsureCardFaceMaterial()
         {
-            var defaultPath = AssetDatabase.GUIDToAssetPath(DefaultSpriteMaterialGuid);
-            var defaultMaterial = AssetDatabase.LoadAssetAtPath<Material>(defaultPath);
-            if (defaultMaterial != null)
+            var shader = LoadCardFaceShader();
+            if (shader == null)
             {
-                return defaultMaterial;
+                return null;
             }
 
             var existing = AssetDatabase.LoadAssetAtPath<Material>(CardFaceMaterialPath);
             if (existing != null)
             {
-                return existing;
-            }
+                if (existing.shader != shader)
+                {
+                    existing.shader = shader;
+                }
 
-            var shader = Shader.Find("Sprites/Default");
-            if (shader == null)
-            {
-                Debug.LogError("[CardBattle] Sprites/Default 셰이더를 찾을 수 없습니다.");
-                return null;
+                ApplyCardFaceMaterialSettings(existing);
+                EditorUtility.SetDirty(existing);
+                return existing;
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(CardFaceMaterialPath) ?? "Assets/Materials/CardBattle");
@@ -390,12 +390,38 @@ namespace CardGame.CardBattle.Editor
             {
                 name = "CardFace_Default"
             };
-            material.SetFloat("_ZWrite", 0f);
-            material.SetFloat("_Cull", (float)CullMode.Off);
-            material.renderQueue = (int)RenderQueue.Transparent;
+            ApplyCardFaceMaterialSettings(material);
 
             AssetDatabase.CreateAsset(material, CardFaceMaterialPath);
             return material;
+        }
+
+        private static Shader LoadCardFaceShader()
+        {
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(CardFaceShaderPath);
+            if (shader != null)
+            {
+                return shader;
+            }
+
+            shader = Shader.Find("CardBattle/CardFaceUnlit");
+            if (shader != null)
+            {
+                return shader;
+            }
+
+            Debug.LogError("[CardBattle] CardFaceUnlit 셰이더를 찾을 수 없습니다: " + CardFaceShaderPath);
+            return null;
+        }
+
+        private static void ApplyCardFaceMaterialSettings(Material material)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            material.SetFloat("_Cutoff", CardFaceAlphaCutoff);
         }
 
         private static CardFaceView CreateCardFace(

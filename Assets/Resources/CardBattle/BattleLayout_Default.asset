@@ -12,10 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7e07538cfc23914ca7058fa93140af2, type: 3}
   m_Name: BattleLayout_Default
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Core.BattleLayoutConfig
-  cardEntityPrefab: {fileID: 8588062042898770501, guid: f21ebd5188f5a7345835a502eb548b0b, type: 3}
-  battlefieldSlotCount: 3
-  playerCardBack: {fileID: 0}
-  enemyCardBack: {fileID: 0}
+  cardEntityPrefab: {fileID: 7065221869133043338, guid: f21ebd5188f5a7345835a502eb548b0b, type: 3}
+  playerCardBack: {fileID: 21300000, guid: c8f4e2a19b3d4f6e8a1c0d5e7f9b2a34, type: 3}
+  enemyCardBack: {fileID: 21300000, guid: c8f4e2a19b3d4f6e8a1c0d5e7f9b2a34, type: 3}
   deployMoveDuration: 0.45
   flipDuration: 0.4
   attackPresentationTailDelay: 0.55

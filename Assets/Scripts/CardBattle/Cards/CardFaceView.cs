@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace CardGame.CardBattle.Cards
 {
-    /// <summary>카드 앞/뒤 면 — Quad Mesh + Sprites/Default, Sprite UV/틴트.</summary>
+    /// <summary>카드 앞/뒤 면 — Quad Mesh + CardFaceUnlit, Sprite UV/틴트.</summary>
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public sealed class CardFaceView : MonoBehaviour
     {

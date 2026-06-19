@@ -19,6 +19,7 @@ namespace CardGame.CardBattle.Presentation
         private readonly List<ICardInputHost> inputHosts = new List<ICardInputHost>();
         private bool isBuilt;
         private int boardGeneration;
+        private bool isShuttingDown;
         private readonly SemaphoreSlim presentationLock = new SemaphoreSlim(1, 1);
 
         public event Action InputHostsChanged;
@@ -118,20 +119,53 @@ namespace CardGame.CardBattle.Presentation
 
         private async UniTask EnqueuePresentation(Func<UniTask> work)
         {
-            await presentationLock.WaitAsync();
+            if (isShuttingDown)
+            {
+                return;
+            }
+
             try
             {
-                await work();
+                await presentationLock.WaitAsync(this.GetCancellationTokenOnDestroy());
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!isShuttingDown)
+                {
+                    await work();
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
             finally
             {
-                presentationLock.Release();
+                if (!isShuttingDown)
+                {
+                    try
+                    {
+                        presentationLock.Release();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
             }
         }
 
         private void OnDestroy()
         {
-            presentationLock.Dispose();
+            isShuttingDown = true;
+            boardGeneration++;
         }
 
         private async UniTask BuildBoardInternalAsync(BattleField field)
