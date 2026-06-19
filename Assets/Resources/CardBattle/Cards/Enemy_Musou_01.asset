@@ -15,5 +15,5 @@ MonoBehaviour:
   cardId: Enemy_Musou_01
   displayName: Enemy Musou 01
   maxHp: 4
-  illustration: {fileID: 21300000, guid: c8f4e2a19b3d4f6e8a1c0d5e7f9b2a34, type: 3}
+  illustration: {fileID: 21300000, guid: 85738257ac6882d458268ef130683f46, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345603, type: 2}

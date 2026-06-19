@@ -15,5 +15,5 @@ MonoBehaviour:
   cardId: Player_Normal_01
   displayName: Player Normal 01
   maxHp: 5
-  illustration: {fileID: 21300000, guid: c8f4e2a19b3d4f6e8a1c0d5e7f9b2a34, type: 3}
+  illustration: {fileID: 21300000, guid: 69b30b2a45d5db34eb107ba7adcfd329, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345601, type: 2}

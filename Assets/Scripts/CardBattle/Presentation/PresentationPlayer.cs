@@ -83,6 +83,15 @@ namespace CardGame.CardBattle.Presentation
 
                     break;
 
+                case PresentationCueKind.HpBarTween:
+                    if (viewRegistry != null && viewRegistry.TryGetView(cue.SubjectId, out var healTarget))
+                    {
+                        healTarget.SetHpDisplay(cue.HpFrom);
+                        await PlayHpBarTweenAsync(healTarget, cue.HpFrom, cue.HpTo);
+                    }
+
+                    break;
+
                 case PresentationCueKind.Wait:
                     await UniTask.Delay(TimeSpan.FromSeconds(cue.Duration));
                     break;

@@ -31,7 +31,7 @@ namespace CardGame.CardBattle.Core
         UniTask<bool> ExecuteBattleAsync(BattleActionRequest request);
 
         void RaiseTurnBanner(bool isPlayerTurn);
-        void RaiseHealerPulse(IReadOnlyList<TurnStartHealEvent> healEvents);
+        UniTask PlayTurnStartHealAsync(IReadOnlyList<TurnStartHealEvent> healEvents);
         void RaiseReserveChanged();
         void RaiseGameOver(bool playerWin);
 

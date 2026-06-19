@@ -276,14 +276,14 @@ namespace CardGame.CardBattle.Editor
                 var front = CreateCardFace(
                     "Front",
                     shakeRoot.transform,
-                    new Vector3(0f, 0f, 0.012f),
+                    new Vector3(0f, 0f, CardFaceView.FrontFaceLocalZ),
                     Quaternion.identity,
                     faceMaterial,
                     sortingOrder: 1);
                 var back = CreateCardFace(
                     "Back",
                     shakeRoot.transform,
-                    new Vector3(0f, 0f, -0.012f),
+                    new Vector3(0f, 0f, CardFaceView.BackFaceLocalZ),
                     Quaternion.Euler(0f, 180f, 0f),
                     faceMaterial,
                     sortingOrder: 0);
@@ -292,11 +292,12 @@ namespace CardGame.CardBattle.Editor
                 front.ApplySprite(fallbackSprite);
                 back.ApplySprite(fallbackSprite);
 
-                var nameLabel = CreateWorldLabel("NameLabel", shakeRoot.transform, new Vector3(0f, 0.75f, 0.02f), 2.4f);
-                var hpLabel = CreateWorldLabel("HpLabel", shakeRoot.transform, new Vector3(0f, -0.85f, 0.02f), 2f);
+                var nameLabel = CreateWorldLabel("NameLabel", shakeRoot.transform, new Vector3(0f, 0.75f, 0f), 2.4f);
+                var hpBar = CreateHpBar(shakeRoot.transform, faceMaterial);
+                var hpLabel = CreateWorldLabel("HpLabel", shakeRoot.transform, new Vector3(0f, -0.85f, 0f), 2f);
 
                 var entity = root.AddComponent<CardEntity>();
-                WireCardEntity(entity, shakeRoot.transform, front, back, nameLabel, hpLabel);
+                WireCardEntity(entity, shakeRoot.transform, front, back, nameLabel, hpLabel, hpBar);
 
                 var prefabRoot = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 if (prefabRoot == null)
@@ -466,6 +467,7 @@ namespace CardGame.CardBattle.Editor
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
+            localPos.z = CardFaceView.LabelLocalZ;
             go.transform.localPosition = localPos;
             go.transform.localRotation = Quaternion.identity;
 
@@ -474,8 +476,84 @@ namespace CardGame.CardBattle.Editor
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.rectTransform.sizeDelta = new Vector2(2f, 0.5f);
             tmp.text = name;
-            tmp.sortingOrder = 2;
+            tmp.sortingOrder = name == "HpLabel"
+                ? CardFaceView.HpLabelSortingOrder
+                : CardFaceView.NameLabelSortingOrder;
+
+            var labelPosition = go.transform.localPosition;
+            labelPosition.z = CardFaceView.LabelLocalZ;
+            go.transform.localPosition = labelPosition;
+
             return tmp;
+        }
+
+        private static CardHpBarView CreateHpBar(Transform parent, Material sharedMaterial)
+        {
+            var root = new GameObject("HpBar");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(
+                0f,
+                CardHpBarView.DefaultLocalY,
+                CardHpBarView.DefaultLocalZ);
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+
+            var background = CreateBarQuad(
+                "Background",
+                root.transform,
+                Vector3.zero,
+                new Vector3(CardHpBarView.DefaultWidth, CardHpBarView.DefaultHeight, 1f),
+                sharedMaterial,
+                CardHpBarView.BackgroundSortingOrder);
+            var fillRoot = new GameObject("FillRoot").transform;
+            fillRoot.SetParent(root.transform, false);
+            fillRoot.localPosition = Vector3.zero;
+            fillRoot.localRotation = Quaternion.identity;
+            fillRoot.localScale = new Vector3(CardHpBarView.DefaultWidth, CardHpBarView.DefaultHeight, 1f);
+
+            var fill = CreateBarQuad(
+                "Fill",
+                fillRoot,
+                Vector3.zero,
+                Vector3.one,
+                sharedMaterial,
+                CardHpBarView.FillSortingOrder);
+
+            var hpBar = root.AddComponent<CardHpBarView>();
+            var so = new SerializedObject(hpBar);
+            so.FindProperty("fillRoot").objectReferenceValue = fillRoot;
+            so.FindProperty("backgroundRenderer").objectReferenceValue = background;
+            so.FindProperty("fillRenderer").objectReferenceValue = fill;
+            so.FindProperty("barWidth").floatValue = CardHpBarView.DefaultWidth;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return hpBar;
+        }
+
+        private static MeshRenderer CreateBarQuad(
+            string name,
+            Transform parent,
+            Vector3 localPos,
+            Vector3 localScale,
+            Material sharedMaterial,
+            int sortingOrder)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = localScale;
+
+            var meshFilter = go.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = GetBuiltinQuad();
+
+            var meshRenderer = go.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = sharedMaterial;
+            meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+            meshRenderer.lightProbeUsage = LightProbeUsage.Off;
+            meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+            meshRenderer.sortingOrder = sortingOrder;
+            return meshRenderer;
         }
 
         private static void WireCardEntity(
@@ -484,7 +562,8 @@ namespace CardGame.CardBattle.Editor
             CardFaceView front,
             CardFaceView back,
             TextMeshPro nameLabel,
-            TextMeshPro hpLabel)
+            TextMeshPro hpLabel,
+            CardHpBarView hpBar)
         {
             var so = new SerializedObject(entity);
             so.FindProperty("shakeRoot").objectReferenceValue = shakeRoot;
@@ -492,6 +571,7 @@ namespace CardGame.CardBattle.Editor
             so.FindProperty("backFace").objectReferenceValue = back;
             so.FindProperty("nameLabel").objectReferenceValue = nameLabel;
             so.FindProperty("hpLabel").objectReferenceValue = hpLabel;
+            so.FindProperty("hpBar").objectReferenceValue = hpBar;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

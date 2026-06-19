@@ -33,12 +33,13 @@ namespace CardGame.CardBattle.Presentation
 
         public static PresentationSequence BuildTurnStartHeal(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
-            var cues = new List<PresentationCue> { new PresentationCue(PresentationCueKind.UiHealerBloom) };
-
+            var cues = new List<PresentationCue>();
             if (healEvents == null || healEvents.Count == 0)
             {
                 return new PresentationSequence(cues);
             }
+
+            cues.Add(new PresentationCue(PresentationCueKind.UiHealerBloom));
 
             var seenHealers = new HashSet<CardModel>();
             for (var i = 0; i < healEvents.Count; i++)
@@ -52,6 +53,21 @@ namespace CardGame.CardBattle.Presentation
                 cues.Add(new PresentationCue(
                     PresentationCueKind.PlayTurnHealPresentation,
                     subjectId: healer.InstanceId));
+            }
+
+            for (var i = 0; i < healEvents.Count; i++)
+            {
+                var healEvent = healEvents[i];
+                if (healEvent.Target == null)
+                {
+                    continue;
+                }
+
+                cues.Add(new PresentationCue(
+                    PresentationCueKind.HpBarTween,
+                    subjectId: healEvent.Target.InstanceId,
+                    hpFrom: healEvent.FromHp,
+                    hpTo: healEvent.ToHp));
             }
 
             return new PresentationSequence(cues);

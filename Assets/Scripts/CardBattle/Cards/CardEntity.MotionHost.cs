@@ -36,12 +36,17 @@ namespace CardGame.CardBattle.Cards
         }
 
         TextMeshPro ICardMotionHost.HpLabel => hpLabel;
+        CardHpBarView ICardMotionHost.HpBar => hpBar;
 
         int ICardMotionHost.DisplayHp
         {
             get => displayHp;
             set => displayHp = value;
         }
+
+        int ICardMotionHost.DisplayMaxHp => displayMaxHp;
+
+        void ICardMotionHost.SetHpVisual(int hp) => SetHpDisplay(hp);
 
         void ICardMotionHost.SetPhase(CardBoardPhase nextPhase) => SetPhase(nextPhase);
         void ICardMotionHost.SetFaceDownInstant() => SetFaceDownInstant();

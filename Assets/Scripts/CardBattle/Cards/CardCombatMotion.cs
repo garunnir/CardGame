@@ -25,7 +25,7 @@ namespace CardGame.CardBattle.Cards
 
         public void PlayHpChange(int fromHp, int toHp, Action onComplete = null)
         {
-            if (!host.IsActiveAndEnabled || host.HpLabel == null)
+            if (!host.IsActiveAndEnabled || (host.HpLabel == null && host.HpBar == null))
             {
                 host.RefreshHpInstant();
                 onComplete?.Invoke();
@@ -193,19 +193,11 @@ namespace CardGame.CardBattle.Cards
                 token.ThrowIfCancellationRequested();
                 elapsed += Time.deltaTime;
                 var value = Mathf.RoundToInt(Mathf.Lerp(fromHp, toHp, Mathf.Clamp01(elapsed / duration)));
-                if (host.HpLabel != null)
-                {
-                    host.HpLabel.text = value.ToString();
-                }
-
+                host.SetHpVisual(value);
                 await UniTask.Yield(token);
             }
 
-            if (host.HpLabel != null)
-            {
-                host.HpLabel.text = toHp.ToString();
-            }
-
+            host.SetHpVisual(toHp);
             host.DisplayHp = toHp;
         }
 

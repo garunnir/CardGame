@@ -89,21 +89,25 @@ namespace CardGame.CardBattle.Cards
 
   public readonly struct TurnStartHealEvent
   {
-    public TurnStartHealEvent(CardModel healer, CardModel target, int amount)
+    public TurnStartHealEvent(CardModel healer, CardModel target, int amount, int fromHp, int toHp)
     {
       Healer = healer;
       Target = target;
       Amount = amount;
+      FromHp = fromHp;
+      ToHp = toHp;
     }
 
     public CardModel Healer { get; }
     public CardModel Target { get; }
     public int Amount { get; }
+    public int FromHp { get; }
+    public int ToHp { get; }
   }
 
   public static class TurnStartHealEffect
   {
-    public static IReadOnlyList<TurnStartHealEvent> Apply(CardModel[] battlefield)
+    public static IReadOnlyList<TurnStartHealEvent> Plan(CardModel[] battlefield)
     {
       var events = new List<TurnStartHealEvent>();
       if (battlefield == null)
@@ -131,15 +135,36 @@ namespace CardGame.CardBattle.Cards
           }
 
           var ally = battlefield[j];
-          if (ally != null && ally.IsAlive)
+          if (ally == null || !ally.IsAlive)
           {
-            ally.Heal(amount);
-            events.Add(new TurnStartHealEvent(card, ally, amount));
+            continue;
           }
+
+          var fromHp = ally.CurrentHp;
+          var toHp = Mathf.Min(ally.MaxHp, fromHp + amount);
+          if (toHp <= fromHp)
+          {
+            continue;
+          }
+
+          events.Add(new TurnStartHealEvent(card, ally, toHp - fromHp, fromHp, toHp));
         }
       }
 
       return events;
+    }
+
+    public static void Apply(IReadOnlyList<TurnStartHealEvent> events)
+    {
+      if (events == null)
+      {
+        return;
+      }
+
+      for (var i = 0; i < events.Count; i++)
+      {
+        events[i].Target?.SetHp(events[i].ToHp);
+      }
     }
   }
 }

@@ -26,7 +26,11 @@ namespace CardGame.CardBattle.Cards
         Quaternion HomeLocalRotation { get; set; }
 
         TextMeshPro HpLabel { get; }
+        CardHpBarView HpBar { get; }
         int DisplayHp { get; set; }
+        int DisplayMaxHp { get; }
+
+        void SetHpVisual(int hp);
 
         void SetPhase(CardBoardPhase phase);
         void SetFaceDownInstant();

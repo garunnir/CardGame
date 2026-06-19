@@ -15,5 +15,5 @@ MonoBehaviour:
   cardId: Player_Healer_01
   displayName: Player Healer 01
   maxHp: 5
-  illustration: {fileID: 21300000, guid: c8f4e2a19b3d4f6e8a1c0d5e7f9b2a34, type: 3}
+  illustration: {fileID: 21300000, guid: c99687eb83c56c64cb1452b064fb3589, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345604, type: 2}

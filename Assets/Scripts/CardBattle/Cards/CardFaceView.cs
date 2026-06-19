@@ -2,16 +2,25 @@ using UnityEngine;
 
 namespace CardGame.CardBattle.Cards
 {
-    /// <summary>카드 앞/뒤 면 — Quad Mesh + CardFaceUnlit, Sprite UV/틴트.</summary>
+    /// <summary>카드 앞/뒤 면 — Quad Mesh + CardFaceUnlit. 일러스트는 높이 기준 fit(가로 크롭).</summary>
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     public sealed class CardFaceView : MonoBehaviour
     {
         public const float DefaultWidth = 1.6f;
         public const float DefaultHeight = 2.2f;
+        public const float DefaultQuadAspect = DefaultWidth / DefaultHeight;
+        public const float FrontFaceLocalZ = 0.012f;
+        public const float BackFaceLocalZ = -0.012f;
+        public const float LabelLocalZ = 0.02f;
+        public const int NameLabelSortingOrder = 2;
+        public const int HpLabelSortingOrder = 3;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int MainTexStId = Shader.PropertyToID("_MainTex_ST");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int SpriteAspectId = Shader.PropertyToID("_SpriteAspect");
+        private static readonly int QuadAspectId = Shader.PropertyToID("_QuadAspect");
+        private static readonly int SpriteFitId = Shader.PropertyToID("_SpriteFit");
 
         private MeshRenderer meshRenderer;
         private MaterialPropertyBlock propertyBlock;
@@ -89,6 +98,9 @@ namespace CardGame.CardBattle.Cards
                         rect.height / texture.height,
                         rect.x / texture.width,
                         rect.y / texture.height));
+                propertyBlock.SetFloat(SpriteAspectId, rect.width / rect.height);
+                propertyBlock.SetFloat(QuadAspectId, DefaultQuadAspect);
+                propertyBlock.SetFloat(SpriteFitId, 1f);
             }
 
             renderer.SetPropertyBlock(propertyBlock);

@@ -15,5 +15,5 @@ MonoBehaviour:
   cardId: Enemy_Normal_01
   displayName: Enemy Normal 01
   maxHp: 5
-  illustration: {fileID: 21300000, guid: c8f4e2a19b3d4f6e8a1c0d5e7f9b2a34, type: 3}
+  illustration: {fileID: 21300000, guid: 5a52d9373027edf4aa7bc9853741cf0c, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345601, type: 2}

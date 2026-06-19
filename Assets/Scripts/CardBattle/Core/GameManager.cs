@@ -208,17 +208,23 @@ namespace CardGame.CardBattle.Core
             UpdateReserveUi();
         }
 
-        public void RaiseHealerPulse(IReadOnlyList<TurnStartHealEvent> healEvents)
+        public UniTask PlayTurnStartHealAsync(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
-            PlayTurnStartPresentationAsync(healEvents).Forget();
+            if (healEvents == null || healEvents.Count == 0)
+            {
+                return UniTask.CompletedTask;
+            }
+
+            return PlayTurnStartPresentationAsync(healEvents);
         }
 
-        private async UniTaskVoid PlayTurnStartPresentationAsync(IReadOnlyList<TurnStartHealEvent> healEvents)
+        private async UniTask PlayTurnStartPresentationAsync(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
             ICardViewRegistry viewRegistry = cardBoardPresenter;
             if (presentationPlayer == null)
             {
                 presentationService?.PlayHealFromEvents(healEvents, FindView);
+                SyncHealedTargets(healEvents);
                 return;
             }
 
@@ -228,6 +234,29 @@ namespace CardGame.CardBattle.Core
                 uiManager,
                 presentationService,
                 viewRegistry);
+            SyncHealedTargets(healEvents);
+        }
+
+        private void SyncHealedTargets(IReadOnlyList<TurnStartHealEvent> healEvents)
+        {
+            if (cardBoardPresenter == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < healEvents.Count; i++)
+            {
+                var target = healEvents[i].Target;
+                if (target == null)
+                {
+                    continue;
+                }
+
+                if (cardBoardPresenter.TryGetView(target.InstanceId, out var view))
+                {
+                    view.SetHpDisplay(target.CurrentHp);
+                }
+            }
         }
 
         public ICardBattleView FindView(CardInstanceId id)

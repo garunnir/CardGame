@@ -37,6 +37,7 @@ namespace CardGame.CardBattle.Cards
         [SerializeField] private CardFaceView backFace;
         [SerializeField] private TextMeshPro nameLabel;
         [SerializeField] private TextMeshPro hpLabel;
+        [SerializeField] private CardHpBarView hpBar;
         private float deployMoveDuration = 0.45f;
         private float flipDuration = 0.4f;
         private float attackDashDistance = 0.55f;
@@ -48,6 +49,7 @@ namespace CardGame.CardBattle.Cards
 
         private CardViewState viewState;
         private int displayHp;
+        private int displayMaxHp;
         private Vector3 homeLocalPosition;
         private Quaternion homeLocalRotation;
         private Color frontBaseColor = Color.white;
@@ -164,6 +166,7 @@ namespace CardGame.CardBattle.Cards
         {
             viewState = state;
             displayHp = state.DisplayHp;
+            displayMaxHp = state.MaxHp > 0 ? state.MaxHp : Mathf.Max(state.DisplayHp, 1);
 
             if (nameLabel != null)
             {
@@ -205,20 +208,25 @@ namespace CardGame.CardBattle.Cards
 
         public void RefreshHpInstant()
         {
-            if (hpLabel == null)
-            {
-                return;
-            }
-
-            hpLabel.text = displayHp.ToString();
+            ApplyHpVisual(displayHp);
         }
 
         public void SetHpDisplay(int hp)
         {
             displayHp = hp;
+            ApplyHpVisual(hp);
+        }
+
+        private void ApplyHpVisual(int hp)
+        {
             if (hpLabel != null)
             {
                 hpLabel.text = hp.ToString();
+            }
+
+            if (hpBar != null)
+            {
+                hpBar.SetFill(hp, displayMaxHp);
             }
         }
 
@@ -281,6 +289,11 @@ namespace CardGame.CardBattle.Cards
             if (hpLabel != null)
             {
                 hpLabel.gameObject.SetActive(visible);
+            }
+
+            if (hpBar != null)
+            {
+                hpBar.SetVisible(visible);
             }
         }
     }

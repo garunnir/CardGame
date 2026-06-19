@@ -14,7 +14,6 @@ namespace CardGame.CardBattle.States
             int generation)
         {
             context.IsPlayerTurn = isPlayerTurn;
-            var healEvents = TurnStartHealEffect.Apply(battlefield);
             await context.SyncAllViewsAsync();
 
             if (!context.IsStateGenerationCurrent(generation))
@@ -22,8 +21,16 @@ namespace CardGame.CardBattle.States
                 return;
             }
 
+            var healEvents = TurnStartHealEffect.Plan(battlefield);
+            TurnStartHealEffect.Apply(healEvents);
+
+            if (!context.IsStateGenerationCurrent(generation))
+            {
+                return;
+            }
+
             context.RaiseTurnBanner(isPlayerTurn);
-            context.RaiseHealerPulse(healEvents);
+            await context.PlayTurnStartHealAsync(healEvents);
         }
     }
 }
