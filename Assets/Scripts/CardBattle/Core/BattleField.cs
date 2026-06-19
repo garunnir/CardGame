@@ -139,7 +139,7 @@ namespace CardGame.CardBattle.Core
             return count;
         }
 
-        public void DeployInitial(List<CardDataAsset> deck, bool isPlayerTeam)
+        public void DeployInitial(IReadOnlyList<CardDataAsset> deck, bool isPlayerTeam)
         {
             if (deck == null || deck.Count < SlotCount * 2)
             {

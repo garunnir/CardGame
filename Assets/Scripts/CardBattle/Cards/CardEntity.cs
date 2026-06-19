@@ -35,6 +35,8 @@ namespace CardGame.CardBattle.Cards
         [SerializeField] private CardFaceView backFace;
         [SerializeField] private TextMeshPro nameLabel;
         [SerializeField] private TextMeshPro hpLabel;
+        private float deployMoveDuration = 0.45f;
+        private float flipDuration = 0.4f;
         private float attackDashDistance = 0.55f;
         private float attackDashDuration = 0.2f;
         private float deathVisualDuration = 0.35f;
@@ -136,6 +138,8 @@ namespace CardGame.CardBattle.Cards
                 return;
             }
 
+            deployMoveDuration = layoutConfig.deployMoveDuration;
+            flipDuration = layoutConfig.flipDuration;
             attackDashDistance = layoutConfig.attackDashDistance;
             attackDashDuration = layoutConfig.attackDashDuration;
             hpChangeDuration = layoutConfig.hpChangeDuration;

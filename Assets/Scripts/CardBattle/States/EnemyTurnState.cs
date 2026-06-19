@@ -10,7 +10,7 @@ namespace CardGame.CardBattle.States
     {
         private bool running;
 
-        public EnemyTurnState(GameManager context) : base(context)
+        public EnemyTurnState(IBattleContext context) : base(context)
         {
         }
 

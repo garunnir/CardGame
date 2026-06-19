@@ -5,7 +5,7 @@ namespace CardGame.CardBattle.States
 {
     public sealed class InitState : BaseState
     {
-        public InitState(GameManager context) : base(context)
+        public InitState(IBattleContext context) : base(context)
         {
         }
 

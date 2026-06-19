@@ -21,6 +21,33 @@ namespace CardGame.CardBattle.Cards
             transform.localRotation = homeLocalRotation;
         }
 
+        /// <summary>목표 앵커·phase를 적용. reparent·보간은 View가 현재 월드 pose 기준으로 처리.</summary>
+        public async UniTask ApplyPlacement(
+            Transform anchorParent,
+            Vector3 targetLocalPosition,
+            Quaternion targetLocalRotation,
+            CardBoardPhase targetPhase,
+            bool animate)
+        {
+            if (!IsMotionValid)
+            {
+                return;
+            }
+
+            CancelMotion();
+            ReparentPreserveWorld(anchorParent);
+
+            switch (targetPhase)
+            {
+                case CardBoardPhase.ReserveFaceDown:
+                    await ApplyReservePlacementAsync(targetLocalPosition, targetLocalRotation, animate);
+                    break;
+                case CardBoardPhase.BattlefieldFaceUp:
+                    await ApplyBattlefieldPlacementAsync(targetLocalPosition, targetLocalRotation, animate);
+                    break;
+            }
+        }
+
         public async UniTask PlayRealignOnAnchorAsync(Vector3 targetLocalPosition, float moveDuration)
         {
             if (!IsMotionValid)
@@ -63,12 +90,29 @@ namespace CardGame.CardBattle.Cards
             float moveDuration,
             float flipDuration)
         {
-            await PlayDeployAsync(targetLocalPosition, Quaternion.identity, moveDuration, flipDuration);
+            var previousMove = deployMoveDuration;
+            var previousFlip = flipDuration;
+            deployMoveDuration = moveDuration;
+            this.flipDuration = flipDuration;
+            try
+            {
+                await ApplyPlacement(
+                    null,
+                    targetLocalPosition,
+                    Quaternion.identity,
+                    CardBoardPhase.BattlefieldFaceUp,
+                    animate: true);
+            }
+            finally
+            {
+                deployMoveDuration = previousMove;
+                this.flipDuration = previousFlip;
+            }
         }
 
         public UniTask SnapReserveOnAnchorAsync(Vector3 localPosition)
         {
-            return SnapReserveAsync(localPosition, Quaternion.identity);
+            return ApplyPlacement(null, localPosition, Quaternion.identity, CardBoardPhase.ReserveFaceDown, animate: false);
         }
 
         public void SnapToLocalPose(Vector3 localPosition, Quaternion localRotation)
@@ -81,17 +125,62 @@ namespace CardGame.CardBattle.Cards
             ResetVisualOffset();
         }
 
-        public async UniTask PlayDeployAsync(
+        private async UniTask ApplyReservePlacementAsync(
             Vector3 targetLocalPosition,
             Quaternion targetLocalRotation,
-            float moveDuration,
-            float flipDuration)
+            bool animate)
         {
             if (!IsMotionValid)
             {
                 return;
             }
 
+            gameObject.SetActive(true);
+            ResetVisualScale();
+
+            if (animate && !IsAtTargetLocalPose(targetLocalPosition, targetLocalRotation))
+            {
+                var token = this.GetCancellationTokenOnDestroy();
+                await AnimateLocalMoveAsync(transform.localPosition, targetLocalPosition, deployMoveDuration, token);
+                if (!IsMotionValid || token.IsCancellationRequested)
+                {
+                    return;
+                }
+            }
+
+            FinalizeLocalPose(targetLocalPosition, targetLocalRotation);
+            SetPhase(CardBoardPhase.ReserveFaceDown);
+        }
+
+        private async UniTask ApplyBattlefieldPlacementAsync(
+            Vector3 targetLocalPosition,
+            Quaternion targetLocalRotation,
+            bool animate)
+        {
+            if (!IsMotionValid)
+            {
+                return;
+            }
+
+            var isDeploy = phase != CardBoardPhase.BattlefieldFaceUp;
+
+            if (isDeploy && animate)
+            {
+                await AnimateDeployAsync(targetLocalPosition, targetLocalRotation);
+                return;
+            }
+
+            if (animate && !IsAtTargetLocalPose(targetLocalPosition, targetLocalRotation))
+            {
+                await AnimateRealignAsync(targetLocalPosition, targetLocalRotation);
+                return;
+            }
+
+            FinalizeBattlefieldPose(targetLocalPosition, targetLocalRotation);
+        }
+
+        private async UniTask AnimateDeployAsync(Vector3 targetLocalPosition, Quaternion targetLocalRotation)
+        {
             var token = this.GetCancellationTokenOnDestroy();
             gameObject.SetActive(true);
             ResetVisualScale();
@@ -99,7 +188,19 @@ namespace CardGame.CardBattle.Cards
             SetFaceDownInstant();
             SetFrontLabelsVisible(false);
 
-            var moveTask = AnimateLocalMoveAsync(transform.localPosition, targetLocalPosition, moveDuration, token);
+            var fromReserve = phase == CardBoardPhase.ReserveFaceDown;
+            UniTask moveTask;
+            if (fromReserve && transform.parent != null)
+            {
+                var startWorld = transform.position;
+                var targetWorld = transform.parent.TransformPoint(targetLocalPosition);
+                moveTask = AnimateWorldMoveAsync(startWorld, targetWorld, deployMoveDuration, token);
+            }
+            else
+            {
+                moveTask = AnimateLocalMoveAsync(transform.localPosition, targetLocalPosition, deployMoveDuration, token);
+            }
+
             var flipTask = AnimateFlipFaceUpAsync(flipDuration, token);
             await UniTask.WhenAll(moveTask, flipTask);
 
@@ -108,31 +209,57 @@ namespace CardGame.CardBattle.Cards
                 return;
             }
 
+            FinalizeBattlefieldPose(targetLocalPosition, targetLocalRotation);
+        }
+
+        private async UniTask AnimateRealignAsync(Vector3 targetLocalPosition, Quaternion targetLocalRotation)
+        {
+            if (IsAtTargetLocalPose(targetLocalPosition, targetLocalRotation))
+            {
+                return;
+            }
+
+            var token = this.GetCancellationTokenOnDestroy();
+            await AnimateLocalMoveAsync(transform.localPosition, targetLocalPosition, deployMoveDuration, token);
+
+            if (!IsMotionValid || token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            FinalizeBattlefieldPose(targetLocalPosition, targetLocalRotation);
+        }
+
+        private void FinalizeBattlefieldPose(Vector3 targetLocalPosition, Quaternion targetLocalRotation)
+        {
+            FinalizeLocalPose(targetLocalPosition, targetLocalRotation);
+            SetPhase(CardBoardPhase.BattlefieldFaceUp);
+            RefreshHpInstant();
+        }
+
+        private void FinalizeLocalPose(Vector3 targetLocalPosition, Quaternion targetLocalRotation)
+        {
             homeLocalPosition = targetLocalPosition;
             homeLocalRotation = targetLocalRotation;
             transform.localPosition = targetLocalPosition;
             transform.localRotation = targetLocalRotation;
             ResetVisualOffset();
-            SetPhase(CardBoardPhase.BattlefieldFaceUp);
-            RefreshHpInstant();
         }
 
-        public UniTask SnapReserveAsync(Vector3 localPosition, Quaternion localRotation)
+        private void ReparentPreserveWorld(Transform anchorParent)
         {
-            if (!IsMotionValid)
+            if (anchorParent == null || transform.parent == anchorParent)
             {
-                return UniTask.CompletedTask;
+                return;
             }
 
-            CancelMotion();
-            homeLocalPosition = localPosition;
-            homeLocalRotation = localRotation;
-            transform.localPosition = localPosition;
-            transform.localRotation = localRotation;
-            ResetVisualOffset();
-            ResetVisualScale();
-            SetPhase(CardBoardPhase.ReserveFaceDown);
-            return UniTask.CompletedTask;
+            transform.SetParent(anchorParent, worldPositionStays: true);
+        }
+
+        private bool IsAtTargetLocalPose(Vector3 localPosition, Quaternion localRotation)
+        {
+            return Vector3.Distance(transform.localPosition, localPosition) < 0.001f
+                && Quaternion.Angle(transform.localRotation, localRotation) < 0.1f;
         }
 
         public void PlayHpChange(int fromHp, int toHp, Action onComplete = null)
@@ -271,6 +398,7 @@ namespace CardGame.CardBattle.Cards
 
             if (useDotween)
             {
+                transform.localPosition = from;
                 var tween = transform.DOLocalMove(to, duration).SetEase(Ease.OutCubic);
                 await UniTask.WaitUntil(() => !tween.IsActive(), cancellationToken: token);
                 return;
@@ -292,6 +420,50 @@ namespace CardGame.CardBattle.Cards
             if (IsMotionValid)
             {
                 transform.localPosition = to;
+            }
+        }
+
+        private async UniTask AnimateWorldMoveAsync(
+            Vector3 from,
+            Vector3 to,
+            float duration,
+            System.Threading.CancellationToken token)
+        {
+            if (!IsMotionValid)
+            {
+                return;
+            }
+
+            if (duration <= 0f)
+            {
+                transform.position = to;
+                return;
+            }
+
+            if (useDotween)
+            {
+                transform.position = from;
+                var tween = transform.DOMove(to, duration).SetEase(Ease.OutCubic);
+                await UniTask.WaitUntil(() => !tween.IsActive(), cancellationToken: token);
+                return;
+            }
+
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                if (!IsMotionValid || token.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                elapsed += Time.deltaTime;
+                transform.position = Vector3.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+                await UniTask.Yield(token);
+            }
+
+            if (IsMotionValid)
+            {
+                transform.position = to;
             }
         }
 

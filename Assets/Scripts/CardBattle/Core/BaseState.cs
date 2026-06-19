@@ -12,12 +12,12 @@ namespace CardGame.CardBattle.Core
     /// <summary>상태 패턴 추상 베이스.</summary>
     public abstract class BaseState
     {
-        protected BaseState(GameManager context)
+        protected BaseState(IBattleContext context)
         {
             Context = context;
         }
 
-        protected GameManager Context { get; }
+        protected IBattleContext Context { get; }
 
         public abstract BattleFlowStateId StateId { get; }
 

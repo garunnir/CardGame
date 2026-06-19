@@ -12,7 +12,7 @@ using UnityEngine;
 namespace CardGame.CardBattle.Core
 {
     /// <summary>전투 FSM 및 데이터 허브. static 싱글톤 대신 주입/SerializeField 지원.</summary>
-    public sealed class GameManager : MonoBehaviour
+    public sealed class GameManager : MonoBehaviour, IBattleContext
     {
         [SerializeField] private UIManager uiManager;
         [SerializeField] private DragTargetingPresenter dragTargetingPresenter;
@@ -29,11 +29,14 @@ namespace CardGame.CardBattle.Core
         public List<CardDataAsset> PlayerDeckData { get; private set; } = new List<CardDataAsset>();
         public List<CardDataAsset> EnemyDeckData { get; private set; } = new List<CardDataAsset>();
 
+        IReadOnlyList<CardDataAsset> IBattleContext.PlayerDeckData => PlayerDeckData;
+        IReadOnlyList<CardDataAsset> IBattleContext.EnemyDeckData => EnemyDeckData;
+
         public BattleActionRequest PendingAction { get; set; }
         public bool IsPlayerTurn { get; set; }
         public BattleFlowStateId CurrentStateId => currentState?.StateId ?? BattleFlowStateId.Init;
 
-        public Action<bool> OnBattleResult;
+        public Action<bool> OnBattleResult { get; set; }
         public Action<bool> OnTurnChanged;
         public Action<CardModel> OnAttackerSelected;
         public Action<BattleActionResult> OnBattleResolvedEvent;

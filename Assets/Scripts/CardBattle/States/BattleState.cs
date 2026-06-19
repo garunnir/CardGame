@@ -8,7 +8,7 @@ namespace CardGame.CardBattle.States
     {
         private readonly bool advanceToEnemyTurn;
 
-        public BattleState(GameManager context, bool advanceToEnemyTurnAfter) : base(context)
+        public BattleState(IBattleContext context, bool advanceToEnemyTurnAfter) : base(context)
         {
             advanceToEnemyTurn = advanceToEnemyTurnAfter;
         }

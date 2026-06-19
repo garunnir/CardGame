@@ -138,21 +138,24 @@ CardEntity (ICardInputHost, InstanceId)
 - **타겟팅 SSOT**: `CardTargetingRules(BattleField)` → `CardEntity.ApplyInputTargeting` (presenter 갱신)
 - `MeleeAttackPresentationModule` — cue 타이밍만 (SFX/VFX는 `CardPresentationService`)
 
-### 추가 라운드 필요: **일부 (P1)**
+### 추가 라운드 필요: **선택 (P2 위주)**
 
 | 우선순위 | 항목 | 이유 |
 |----------|------|------|
 | **P1** | `CardEntity` (~800줄 partial) | motion/input/뷰 단일 MonoBehaviour |
-| **P1** | `CardBoardPresenter` (~650줄) | spawn/sync/lock God class |
-| **P1** | `GameManager` composition root | FSM·보드·연출·UI 허브 비대 |
 | **P2** | asmdef 레이어 분리 | 논리 경계 컴파일 강제 (승인 후) |
 | **P2** | `CardEntity.Motion` Coroutine → UniTask | tech-stack 정책 정합 |
 
+### 완료 (이번 라운드)
+
+- `CardBoardPresenter` → `EntityRegistry` / `Placement` / `Deployer` / `TeamOps` / `InputTargeting` 분할 (~230줄 오케스트레이터)
+- `IBattleContext` — FSM이 `GameManager` concrete 대신 인터페이스 사용
+
 ### 권장 다음 라운드 순서
 
-1. `CardBoardPresenter` spawn/sync 책임 분할 (`CardBoardSpawner` / `CardBoardSync`)
-2. `CardEntity` motion → 별 컴포넌트 또는 `ICardMotionView`
-3. `IBattleContext`로 States ↔ `GameManager` 결합 완화
+1. `CardEntity` motion → 별 컴포넌트 또는 `ICardMotionView`
+2. asmdef 논리 분리 (승인 시)
+3. `CardEntity.Motion` Coroutine → UniTask
 
 ---
 
@@ -165,6 +168,12 @@ Assets/Scripts/CardBattle/
 ├── Core/            # Field, FSM hub, resolver, orchestrator, layout SO
 ├── Input/           # Drag line, contracts
 ├── Presentation/    # Board, player, cues, modules
+│   ├── CardBoardPresenter.cs      # lock·오케스트레이션
+│   ├── CardBoardEntityRegistry.cs
+│   ├── CardBoardTeamOps.cs        # spawn/sync
+│   ├── CardBoardDeployer.cs
+│   ├── CardBoardPlacement.cs
+│   └── CardBoardInputTargeting.cs
 ├── States/          # FSM states
 └── UI/              # UIManager
 ```

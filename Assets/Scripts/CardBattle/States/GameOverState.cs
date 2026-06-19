@@ -7,7 +7,7 @@ namespace CardGame.CardBattle.States
     {
         private readonly bool playerWin;
 
-        public GameOverState(GameManager context, bool playerWin) : base(context)
+        public GameOverState(IBattleContext context, bool playerWin) : base(context)
         {
             this.playerWin = playerWin;
         }

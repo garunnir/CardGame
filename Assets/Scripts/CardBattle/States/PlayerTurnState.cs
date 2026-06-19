@@ -11,7 +11,7 @@ namespace CardGame.CardBattle.States
         private readonly CardBattleTargetingPolicy targetingPolicy;
         private CardInstanceId selectedAttackerId;
 
-        public PlayerTurnState(GameManager context) : base(context)
+        public PlayerTurnState(IBattleContext context) : base(context)
         {
             targetingPolicy = new CardBattleTargetingPolicy(model =>
                 CardTargetingRules.IsFaceUpBattlefieldCard(context.Field, model));
