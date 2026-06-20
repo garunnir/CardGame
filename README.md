@@ -12,8 +12,9 @@
 | `.cursor/rules/collaboration-unity.mdc` | Unity 구현·핫패스·Mermaid 등 |
 | `.cursor/rules/unity-stack.mdc` | Unity/C# 스택 요약 (`Assets/**` 작업 시) |
 | `docs/tech-stack.md` | 스택·C# 9 제약·패키지 정본 |
+| `docs/card-battle-architecture.md` | CardBattle 레이어·파이프라인·리팩터 현황 |
 
-`Assets/Scripts/CardBattle/` 구조·아키텍처·에디터 절차를 바꿀 때는 **같은 PR/커밋에서 이 README를 함께 갱신**한다. 협업 규칙과 충돌하면 **협업 문서가 우선**한다.
+`Assets/Scripts/CardBattle/` 구조·아키텍처·에디터 절차를 바꿀 때는 **같은 PR/커밋에서 이 README와 `docs/card-battle-architecture.md`를 함께 갱신**한다. 협업 규칙과 충돌하면 **협업 문서가 우선**한다.
 
 ## 환경
 
@@ -34,43 +35,53 @@
 - [x] 승패 판정 (한 진영 6장 전멸)
 - [x] State 패턴 FSM (Init → Player → Battle → Enemy → GameOver)
 - [x] 클릭·드래그 타겟 선택 (`CardBattleTargetingPolicy`, `IInputProvider`)
+- [x] 카드 롱프레스(1초) 상세 보기 (`CardDetailOverlayPresenter`, `CardDetailContext`)
 - [x] Utility AI 적 타겟 선정
 - [x] UI: 턴 배너, 대기 덱 수, HP바, 결과 팝업, Restart
+- [x] 3D 보드 (`CardEntity` + `CardBoardPresenter`, PhysicsRaycaster 타겟팅)
 
 ### 가산점
 
 - [x] URP Post Processing (Bloom 펄스 — 힐/공격)
-- [x] DOTween + 코루틴 이중 연출 (HP바, 대시, Shake, 카메라 셰이크)
-- [x] Presentation cue 파이프라인 (`PresentationPlayer`, `PresentationSequenceBuilder`)
+- [x] DOTween + UniTask 이중 연출 (HP바, 대시, Shake, 카메라 셰이크)
+- [x] Presentation cue 파이프라인 (`PresentationPlayer`, `PresentationSequenceBuilder`, `CardPresentationService`)
 - [x] 드래그 타겟 라인 프리뷰 (`DragTargetingPresenter`)
 - [x] `CardBattle.asmdef` / `CardBattle.Editor.asmdef` 컴파일 격리
 - [x] `BattleBridge` / `ICardDataLoader` / `BattleAudioAdapter` 이식 브릿지
-- [x] Input System 추상화 (`IInputProvider`)
+- [x] Input System 추상화 (`IInputProvider`, `UnityInputProvider`)
 - [x] UniTask 비동기 턴/연출
-- [x] 에디터 셋업 메뉴 (`Setup CardBattle Scene`, Behavior/CardData 일괄 생성)
-- [ ] 카드 일러스트 에셋 (`CardDataAsset.illustration` — **에디터 작업**)
+- [x] 에디터 셋업 메뉴 (씬·보드·Behavior/CardData 일괄 생성)
+- [x] 카드 일러스트 기본 파이프라인 (`Assign Default Card Illustrations` — 개별 아트 교체는 선택)
 
-## 폴더 구조
+## 폴더 구조 (요약)
 
 ```
 Assets/Scripts/CardBattle/
 ├── CardBattle.asmdef
 ├── AI/EnemyAIController.cs
-├── Bridge/BattleBridge.cs, ICardDataLoader.cs, BattleAudioAdapter.cs, ...
-├── Cards/CardModel, CardView, CardDataAsset, CardBehaviorAsset, *BehaviorAsset, IBattleEffectModule, ...
-├── Core/GameManager, BattleField, CardBattleTargetingPolicy, ...
+├── Bridge/BattleBridge, ICardDataLoader, BattleAudioAdapter, ...
+├── Cards/CardModel, CardEntity, CardDataAsset, CardBehaviorAsset, *BehaviorAsset, motion, ...
+├── Core/GameManager, BattleField, BattleOrchestrator, BattleLayoutConfig, ...
 ├── Input/DragTargetingPresenter, DragTargetingContracts
-├── Presentation/PresentationPlayer, BattlePresentationModules, ...
+├── Presentation/CardBoardPresenter, PresentationPlayer, CardPresentationService, ...
 ├── States/Init, PlayerTurn, EnemyTurn, Battle, GameOver
 ├── UI/UIManager.cs
-└── Editor/CardBattle.Editor.asmdef, CardBattleSceneSetup, CardBattleBehaviorSetup
+└── Editor/CardBattleSceneSetup, CardBattleBoardSetup, CardBattleBehaviorSetup
+
+Assets/Prefabs/CardBattle/
+└── CardEntity.prefab
 
 Assets/Resources/CardBattle/
+├── BattleLayout_Default.asset
 ├── Behaviors/   # Behavior_Normal, Ranged, Musou, Healer
-└── Cards/       # Player_*, Enemy_* CardDataAsset
+├── Cards/       # Player_*, Enemy_* CardDataAsset
+├── Art/         # 카드 일러스트·뒷면 스프라이트
+└── Vfx/         # SharedHitVfx 등
 ```
 
-## 아키텍처
+상세 디렉터리·레이어 경계는 [`docs/card-battle-architecture.md`](docs/card-battle-architecture.md)를 따른다.
+
+## 아키텍처 (요약)
 
 ```
 [BattleBridge] ──InitializeBattle──▶ [GameManager FSM]
@@ -88,46 +99,53 @@ Assets/Resources/CardBattle/
 [CardModel]                            └─ CollectPresentationModules → PresentationSequence
         │
         ▼
-[CardView] ◀── Bind ── SyncAllViews
+[CardEntity] ◀── CardBoardPresenter (스폰·배치·sync)
         │
-        ├─ IInputProvider (클릭/드래그)
-        └─ DragTargetingPresenter (라인 프리뷰)
+        ├─ UnityInputProvider (클릭/드래그, CardInstanceId)
+        └─ DragTargetingPresenter (UI 드래그 라인)
 ```
 
 **네임스페이스:** `CardGame.CardBattle.*`
 
-**카드 UI:** 전장 슬롯당 `CardView` 1개(플레이어 3 + 적 3). 카드 종류별 프리팹 없이 `CardDataAsset`(이름·일러스트·HP)로 `Bind()` 갱신.
+**카드 표현:** 전장·대기 슬롯마다 `CardEntity` 프리팹 인스턴스. `CardDataAsset`(이름·일러스트·HP)과 `CardViewState`로 `Bind()` 갱신. 배치·연출은 `CardBoardPresenter` / `CardEntity.ApplyPlacement` / motion 드라이버가 담당.
 
-## 에디터 수동 작업
+입력·공격·배치 파이프라인, 모델–뷰 분리, 변경 체크리스트는 **아키텍처 문서**에 정리되어 있다.
 
-### A. 씬 셋업
+## 에디터 셋업
 
-**권장:** `CardGame → CardBattle → Setup CardBattle Scene`  
-→ `Assets/Scenes/CardBattleScene.unity` 저장, Canvas·카드 슬롯 6·GameManager·UIManager·Build Settings 자동 구성.
+### 권장 (일괄)
 
-**수동:** 아래 항목을 직접 배치할 때.
+`CardGame → CardBattle → Setup CardBattle Scene`
 
-1. **씬:** `Assets/Scenes/CardBattleScene.unity`
-2. **루트 오브젝트**
-   - `BattleSystems` — `GameManager`, `BattleBridge`, `BattleSceneBootstrap`, `BattleAudioAdapter` 부착
-   - Canvas — `UIManager` 부착 (Screen Space Overlay, Landscape 레이아웃)
-   - `EventSystem` (Input System UI Module)
-3. **카드 슬롯 (×6)** — Player 3 / Enemy 3 자식 RectTransform + `CardView` + Image + Slider + TMP
-4. **GameManager Inspector** — `playerCardViews[3]`, `enemyCardViews[3]`, `uiManager`, `dragTargetingPresenter` 연결
-5. **DragTargetingPresenter** — Canvas 자식에 배치, 라인 Image·`rootCanvas`·`uiCamera` 연결 (SceneSetup 메뉴에는 미포함)
-6. **UIManager** — 턴 배너 TMP, 대기 덱 TMP, Win/Lose 패널, Restart 버튼, Global Volume 연결
+→ `Assets/Scenes/CardBattleScene.unity` 저장. Canvas·UIManager·DragTargetingPresenter·BattleBoard·CardBoardPresenter·GameManager·BattleBridge·Build Settings를 자동 구성한다.
 
-### B. 데이터 에셋
+### 데이터·에셋 (최초 1회 또는 갱신 시)
 
-1. `CardGame → CardBattle → Create Default Behavior Assets` (최초 1회)
-2. `CardGame → CardBattle → Link Card Data To Behaviors` (CardData ↔ Behavior 연결)
-3. **BattleBridge** — `defaultPlayerDeck` / `defaultEnemyDeck` 각 6장 할당  
-   ※ 미할당·무효 덱이면 `RuntimeDeckFactory`가 런타임 테스트 덱 생성
+| 메뉴 | 용도 |
+|------|------|
+| `Create Default Behavior Assets` | 타입별 `CardBehaviorAsset` 4종 + 기본 VFX |
+| `Link Card Data To Behaviors` | `CardDataAsset` ↔ Behavior 연결 |
+| `Assign Default Card Illustrations` | 미할당 카드에 기본 일러스트 |
+| `Assign Default Detail Text To Behaviors` | Behavior SO **상세 보기** 타입·설명 기본값 (빈 필드만) |
+| `Assign Default Presentation Vfx` | Behavior SO 명중·피격 VFX 재할당 |
+| `Wire Default Decks To Scene` | 씬 `BattleBridge`에 Resources 덱 연결 |
 
-### C. 빌드
+### 보드·프리팹 (씬 수동 편집 시)
 
-1. **Build Settings** — CardBattleScene 추가, Android ARM64 APK 빌드
-2. **Bundle ID** — `Player Settings → Android → Package Name` 변경
+| 메뉴 | 용도 |
+|------|------|
+| `Create Card Entity Prefab` | `Assets/Prefabs/CardBattle/CardEntity.prefab` 재생성 |
+| `Create Default Battle Layout` | `BattleLayout_Default.asset` |
+| `Ensure Board Zone Anchors` | `BattleBoard` 앵커·Presenter 재연결 (슬롯 pose는 유지) |
+| `Ensure Card Detail Overlay` | Canvas `CardDetailOverlay` 생성·`GameManager.cardDetailOverlay` 연결 |
+
+### 수동 점검 (Setup 메뉴 이후)
+
+1. **GameManager** — `uiManager`, `cardBoardPresenter`, `dragTargetingPresenter`, **`cardDetailOverlay`** 연결  
+   ※ `Ensure Card Detail Overlay` 메뉴로 오버레이·와이어 일괄 처리
+2. **BattleBridge** — `defaultPlayerDeck` / `defaultEnemyDeck` 각 6장 (비어 있으면 `DefaultDeckCatalog` + `RuntimeDeckFactory` 폴백)
+3. **Build Settings** — CardBattleScene 추가, Android ARM64 APK 빌드
+4. **Bundle ID** — `Player Settings → Android → Package Name` 변경
 
 ## AI 도구 활용
 

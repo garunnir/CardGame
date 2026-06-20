@@ -26,6 +26,10 @@ namespace CardGame.CardBattle.Cards
         IDropTarget,
         IDragHoverVisual,
         IPointerClickHandler,
+        IPointerDownHandler,
+        IPointerUpHandler,
+        IPointerMoveHandler,
+        IPointerExitHandler,
         IBeginDragHandler,
         IDragHandler,
         IEndDragHandler
@@ -77,6 +81,8 @@ namespace CardGame.CardBattle.Cards
         public Transform DropTransform => transform;
 
         public event Action<ICardInputHost> Clicked;
+        public event Action<ICardInputHost> LongPressed;
+        public event Action<ICardInputHost> LongPressReleased;
         public event Action<ICardInputHost, Vector2> DragStarted;
         public event Action<ICardInputHost, ICardInputHost, Vector2> DragMoved;
         public event Action<ICardInputHost, ICardInputHost, Vector2> DragEnded;
@@ -118,6 +124,7 @@ namespace CardGame.CardBattle.Cards
 
         private void OnDestroy()
         {
+            CancelLongPressOnDestroy();
             combatMotion?.Dispose();
             transform.DOKill();
             if (shakeRoot != null && shakeRoot != transform)

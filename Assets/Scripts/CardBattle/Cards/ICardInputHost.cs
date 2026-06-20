@@ -13,6 +13,8 @@ namespace CardGame.CardBattle.Cards
         bool CanAcceptTarget { get; }
 
         event Action<ICardInputHost> Clicked;
+        event Action<ICardInputHost> LongPressed;
+        event Action<ICardInputHost> LongPressReleased;
         event Action<ICardInputHost, Vector2> DragStarted;
         event Action<ICardInputHost, ICardInputHost, Vector2> DragMoved;
         event Action<ICardInputHost, ICardInputHost, Vector2> DragEnded;

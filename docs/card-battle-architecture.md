@@ -1,7 +1,9 @@
 # CardBattle 아키텍처
 
-CardBattle 모듈의 런타임 구조·데이터 흐름·레이어 경계를 정리한 문서입니다.  
-스택 공통 사항은 [tech-stack.md](./tech-stack.md)를 따릅니다.
+CardBattle 모듈의 런타임 구조·데이터 흐름·레이어 경계를 정리한 문서입니다.
+
+- 프로젝트 개요·기능 체크리스트·빌드: [README.md](../README.md)
+- 스택 공통 사항: [tech-stack.md](./tech-stack.md)
 
 ## 어셈블리
 
@@ -82,6 +84,8 @@ BattleActionRequest
 
 ## 입력 파이프라인
 
+**스택:** Player Settings = Input System Package (New). `InputSystemUIInputModule` + PhysicsRaycaster. **`UnityEngine.Input` 사용 금지** — 포인터는 `IPointer*` / `PointerEventData` (롱프레스 이동 취소 포함). [`tech-stack.md`](./tech-stack.md) Input 절.
+
 ```
 CardEntity (ICardInputHost, InstanceId)
   → UnityInputProvider (CardInstanceId 이벤트)
@@ -92,6 +96,8 @@ CardEntity (ICardInputHost, InstanceId)
 ```
 
 - FSM·입력 경계: ID만 전달, `CardModel`은 `ICardViewRegistry.TryGetModel`로 해석.
+- **롱프레스 상세:** `CardEntity` 1초 홀드 → `CardLongPressed` → `GameManager` → `CardDetailContext` → `CardDetailOverlayPresenter` (씬: `GameManager.cardDetailOverlay`, 메뉴 `Ensure Card Detail Overlay`)
+- **상세 문구 SSOT:** `CardDataAsset` 덮어쓰기 → `CardBehaviorAsset` 상세 보기 → 코드 폴백 (`CardDetailContextFallback`)
 - 드래그 호버 비주얼: `DragTargetingPresenter` (스크린 라인)
 
 ---
@@ -206,8 +212,16 @@ Assets/Scripts/CardBattle/
 
 ## 에디터 셋업
 
-- `CardGame → CardBattle → Ensure Board Zone Anchors` — 구 `Slot_*` 마이그레이션
-- `CardBattleSceneSetup` / `CardBattleBoardSetup` — 씬·보드 일괄 구성
+일괄 진입: `CardGame → CardBattle → Setup CardBattle Scene` (README 에디터 절차 참조).
+
+| 메뉴 | 스크립트 |
+|------|----------|
+| Setup CardBattle Scene | `CardBattleSceneSetup` |
+| Ensure Card Detail Overlay | `CardBattleSceneSetup` — 기존 씬에 롱프레스 상세 UI 추가 |
+| Create Card Entity Prefab / Create Default Battle Layout / Ensure Board Zone Anchors / Wire Default Decks To Scene | `CardBattleBoardSetup` |
+| Create Default Behavior Assets / Link Card Data To Behaviors / Assign Default Presentation Vfx / Assign Default Card Illustrations | `CardBattleBehaviorSetup` |
+
+`Ensure Board Zone Anchors` — 기존 `BattleBoard` 앵커·Presenter 재연결 (슬롯 pose 덮어쓰지 않음).
 
 ---
 

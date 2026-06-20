@@ -72,6 +72,23 @@ namespace CardGame.CardBattle.Presentation
             return false;
         }
 
+        public bool TryGetEntity(CardInstanceId id, out CardEntity entity)
+        {
+            entity = null;
+            if (!id.IsValid)
+            {
+                return false;
+            }
+
+            if (slots.TryGetValue(id, out var slot) && slot.Entity != null)
+            {
+                entity = slot.Entity;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryGetEntity(CardModel model, out CardEntity entity)
         {
             entity = null;

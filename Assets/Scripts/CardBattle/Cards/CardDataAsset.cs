@@ -29,5 +29,16 @@ namespace CardGame.CardBattle.Cards
         [LabelText("행동 SO")]
         [AssetSelector]
         public CardBehaviorAsset behavior;
+
+        [BoxGroup("상세 보기 (선택)", centerLabel: true)]
+        [LabelText("타입 표시 덮어쓰기")]
+        [Tooltip("비어 있으면 Behavior SO → 코드 기본값 순.")]
+        public string detailTypeLabelOverride;
+
+        [BoxGroup("상세 보기 (선택)")]
+        [LabelText("설명 덮어쓰기")]
+        [Tooltip("비어 있으면 Behavior SO → 코드 기본값 순.")]
+        [TextArea(2, 6)]
+        public string detailDescriptionOverride;
     }
 }

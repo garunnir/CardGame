@@ -10,5 +10,6 @@ Full detail: `docs/tech-stack.md`
 
 * Unity **6000.3.10f1 LTS** · **URP** · **C# 9** (no C# 10+)
 * **UniTask** for new async (no new Coroutines — see collaboration-rules Exceptions)
-* **Input System** · **Odin** Inspector attrs only (no OdinSerializer)
+* **Input System (New) only** — no `UnityEngine.Input`; UI pointer via `InputSystemUIInputModule` + `IPointer*` / `PointerEventData`; detail in `docs/tech-stack.md`
+* **Odin** Inspector attrs only (no OdinSerializer)
 * Namespace: `.asmdef` assembly name, or `ProjectName.FeatureName`; confirm if uncertain; new asmdef/NS needs approval

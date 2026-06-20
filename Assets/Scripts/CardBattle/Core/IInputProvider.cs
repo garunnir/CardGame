@@ -7,6 +7,8 @@ namespace CardGame.CardBattle.Core
     public interface IInputProvider
     {
         event Action<CardInstanceId> CardSelected;
+        event Action<CardInstanceId> CardLongPressed;
+        event Action<CardInstanceId> CardLongPressReleased;
         event Action<CardInstanceId, Vector2> CardDragStarted;
         event Action<CardInstanceId, CardInstanceId, Vector2> CardDragMoved;
         event Action<CardInstanceId, CardInstanceId, Vector2> CardDragEnded;

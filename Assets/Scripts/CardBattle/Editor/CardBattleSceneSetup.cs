@@ -34,6 +34,7 @@ namespace CardGame.CardBattle.Editor
             var canvasGo = CreateCanvasRoot();
             var uiManager = canvasGo.AddComponent<UIManager>();
             var dragPresenter = CreateDragTargetingPresenter(canvasGo.transform);
+            var cardDetailOverlay = CreateCardDetailOverlayPresenter(canvasGo.transform, katuriFont);
 
             CardBattleBoardSetup.EnsureBattleLayoutAsset();
             var layout = AssetDatabase.LoadAssetAtPath<BattleLayoutConfig>(CardBattleBoardSetup.LayoutPath);
@@ -59,7 +60,7 @@ namespace CardGame.CardBattle.Editor
 
             WireUIManager(uiManager, canvasGo, turnBanner.text, turnBanner.group,
                 playerReserve, enemyReserve, winPanel.panel, losePanel.panel, winPanel.button);
-            WireGameManager(gameManager, uiManager, boardPresenter, dragPresenter);
+            WireGameManager(gameManager, uiManager, boardPresenter, dragPresenter, cardDetailOverlay);
             WireVolume(uiManager, volume);
             WireBridge(systemsGo, gameManager);
 
@@ -74,6 +75,61 @@ namespace CardGame.CardBattle.Editor
             AddSceneToBuildSettings(ScenePath);
 
             Debug.Log("[CardBattle] Scene saved: " + ScenePath);
+        }
+
+        [MenuItem("CardGame/CardBattle/Ensure Card Detail Overlay")]
+        public static void EnsureCardDetailOverlayMenu()
+        {
+            if (File.Exists(ScenePath))
+            {
+                EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            }
+
+            var canvasGo = GameObject.Find("BattleCanvas");
+            if (canvasGo == null)
+            {
+                var fallbackCanvas = Object.FindFirstObjectByType<Canvas>();
+                canvasGo = fallbackCanvas != null ? fallbackCanvas.gameObject : null;
+            }
+
+            if (canvasGo == null)
+            {
+                Debug.LogError("[CardBattle] BattleCanvas(Canvas)를 찾을 수 없습니다.");
+                return;
+            }
+
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            if (gameManager == null)
+            {
+                Debug.LogError("[CardBattle] GameManager를 찾을 수 없습니다.");
+                return;
+            }
+
+            var overlayTransform = canvasGo.transform.Find("CardDetailOverlay");
+            CardDetailOverlayPresenter overlay;
+            if (overlayTransform != null)
+            {
+                overlay = overlayTransform.GetComponent<CardDetailOverlayPresenter>();
+                if (overlay == null)
+                {
+                    Debug.LogError("[CardBattle] CardDetailOverlay에 CardDetailOverlayPresenter가 없습니다. 오브젝트를 삭제 후 메뉴를 다시 실행하세요.");
+                    return;
+                }
+            }
+            else
+            {
+                var katuriFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(KaturiFontPath);
+                overlay = CreateCardDetailOverlayPresenter(canvasGo.transform, katuriFont);
+                ApplyFontToAllTmp(overlay.gameObject, katuriFont);
+            }
+
+            overlay.transform.SetAsLastSibling();
+            WireGameManagerCardDetailOverlay(gameManager, overlay);
+            EditorUtility.SetDirty(gameManager);
+            EditorUtility.SetDirty(overlay);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorSceneManager.SaveOpenScenes();
+            Debug.Log("[CardBattle] CardDetailOverlay 연결 완료 → GameManager.cardDetailOverlay");
         }
 
         private static void EnsureEventSystem()
@@ -189,6 +245,126 @@ namespace CardGame.CardBattle.Editor
             so.FindProperty("uiCamera").objectReferenceValue = Camera.main;
             so.ApplyModifiedPropertiesWithoutUndo();
             return presenter;
+        }
+
+        private static CardDetailOverlayPresenter CreateCardDetailOverlayPresenter(
+            Transform canvasRoot,
+            TMP_FontAsset font)
+        {
+            var rootGo = new GameObject("CardDetailOverlay", typeof(RectTransform));
+            rootGo.transform.SetParent(canvasRoot, false);
+            var rootRect = rootGo.GetComponent<RectTransform>();
+            Stretch(rootRect);
+
+            var dimmer = rootGo.AddComponent<Image>();
+            dimmer.color = new Color(0f, 0f, 0f, 0.72f);
+            dimmer.raycastTarget = true;
+
+            var rootGroup = rootGo.AddComponent<CanvasGroup>();
+            rootGroup.alpha = 0f;
+            rootGroup.blocksRaycasts = false;
+
+            var panelGo = new GameObject("Panel", typeof(RectTransform));
+            panelGo.transform.SetParent(rootGo.transform, false);
+            var panelRect = panelGo.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            panelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            panelRect.pivot = new Vector2(0.5f, 0.5f);
+            panelRect.sizeDelta = new Vector2(520f, 720f);
+            panelRect.anchoredPosition = Vector2.zero;
+
+            var panelBg = panelGo.AddComponent<Image>();
+            panelBg.color = new Color(0.08f, 0.1f, 0.14f, 0.96f);
+            panelBg.raycastTarget = false;
+
+            var cardImageGo = new GameObject("CardImage", typeof(RectTransform));
+            cardImageGo.transform.SetParent(panelGo.transform, false);
+            var cardImageRect = cardImageGo.GetComponent<RectTransform>();
+            cardImageRect.anchorMin = new Vector2(0.5f, 1f);
+            cardImageRect.anchorMax = new Vector2(0.5f, 1f);
+            cardImageRect.pivot = new Vector2(0.5f, 1f);
+            cardImageRect.sizeDelta = new Vector2(320f, 440f);
+            cardImageRect.anchoredPosition = new Vector2(0f, -24f);
+            var cardImage = cardImageGo.AddComponent<Image>();
+            cardImage.preserveAspect = true;
+            cardImage.raycastTarget = false;
+
+            var nameText = CreateOverlayTmp(
+                panelGo.transform,
+                "NameText",
+                new Vector2(0f, -490f),
+                new Vector2(460f, 48f),
+                36,
+                TextAlignmentOptions.Center,
+                font);
+            var typeText = CreateOverlayTmp(
+                panelGo.transform,
+                "TypeText",
+                new Vector2(0f, -540f),
+                new Vector2(460f, 36f),
+                28,
+                TextAlignmentOptions.Center,
+                font);
+            typeText.color = new Color(0.75f, 0.9f, 1f, 1f);
+
+            var statsText = CreateOverlayTmp(
+                panelGo.transform,
+                "StatsText",
+                new Vector2(0f, -590f),
+                new Vector2(460f, 56f),
+                30,
+                TextAlignmentOptions.Center,
+                font);
+
+            var contextText = CreateOverlayTmp(
+                panelGo.transform,
+                "ContextText",
+                new Vector2(0f, -680f),
+                new Vector2(460f, 120f),
+                24,
+                TextAlignmentOptions.Top,
+                font);
+            contextText.color = new Color(0.85f, 0.85f, 0.85f, 1f);
+
+            rootGo.SetActive(false);
+
+            var presenter = rootGo.AddComponent<CardDetailOverlayPresenter>();
+            var so = new SerializedObject(presenter);
+            so.FindProperty("rootGroup").objectReferenceValue = rootGroup;
+            so.FindProperty("cardImage").objectReferenceValue = cardImage;
+            so.FindProperty("nameText").objectReferenceValue = nameText;
+            so.FindProperty("statsText").objectReferenceValue = statsText;
+            so.FindProperty("typeText").objectReferenceValue = typeText;
+            so.FindProperty("contextText").objectReferenceValue = contextText;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return presenter;
+        }
+
+        private static TextMeshProUGUI CreateOverlayTmp(
+            Transform parent,
+            string childName,
+            Vector2 anchoredPos,
+            Vector2 size,
+            float fontSize,
+            TextAlignmentOptions align,
+            TMP_FontAsset font)
+        {
+            var go = new GameObject(childName, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = size;
+            rt.anchoredPosition = anchoredPos;
+
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.font = font;
+            tmp.fontSize = fontSize;
+            tmp.alignment = align;
+            tmp.color = Color.white;
+            tmp.raycastTarget = false;
+            return tmp;
         }
 
         private static GameObject CreateCanvasRoot()
@@ -324,12 +500,23 @@ namespace CardGame.CardBattle.Editor
             GameManager gm,
             UIManager ui,
             CardBoardPresenter boardPresenter,
-            DragTargetingPresenter dragPresenter)
+            DragTargetingPresenter dragPresenter,
+            CardDetailOverlayPresenter cardDetailOverlay)
         {
             var so = new SerializedObject(gm);
             so.FindProperty("uiManager").objectReferenceValue = ui;
             so.FindProperty("cardBoardPresenter").objectReferenceValue = boardPresenter;
             so.FindProperty("dragTargetingPresenter").objectReferenceValue = dragPresenter;
+            so.FindProperty("cardDetailOverlay").objectReferenceValue = cardDetailOverlay;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void WireGameManagerCardDetailOverlay(
+            GameManager gm,
+            CardDetailOverlayPresenter cardDetailOverlay)
+        {
+            var so = new SerializedObject(gm);
+            so.FindProperty("cardDetailOverlay").objectReferenceValue = cardDetailOverlay;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

@@ -15,7 +15,16 @@
 
 * **UniTask** — mandatory for new async logic
 * **Odin Inspector** — UI/Inspector attributes only; no `OdinSerializer`
-* **Input System** (`com.unity.inputsystem`)
+* **Input System** (`com.unity.inputsystem`) — **New Input only**
+
+### Input (New Input System exclusive)
+
+* **Player Settings:** Active Input Handling = **Input System Package (New)** (or Both only during migration; new code must not depend on legacy)
+* **PROHIBITED:** `UnityEngine.Input` — `Input.mousePosition`, `Input.GetKey`, `Input.touchCount`, `Input.GetTouch`, etc.
+* **PROHIBITED:** `StandaloneInputModule` on new scenes (use `InputSystemUIInputModule`)
+* **PREFERRED (UI / 3D pointer):** EventSystem + `InputSystemUIInputModule`; handle via `IPointerDownHandler`, `IPointerMoveHandler`, `IBeginDragHandler`, etc. and `PointerEventData.position` — no legacy polling
+* **If polling is unavoidable:** `UnityEngine.InputSystem` — `Mouse.current`, `Touchscreen.current`, `Keyboard.current` (never `UnityEngine.Input`)
+* **CardBattle:** card hit → PhysicsRaycaster + `ICardInputHost` events; domain routing via `IInputProvider` / `UnityInputProvider`
 
 ## Assembly & Namespace
 

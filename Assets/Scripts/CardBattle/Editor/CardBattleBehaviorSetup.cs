@@ -28,9 +28,37 @@ namespace CardGame.CardBattle.Editor
             CreateOrUpdateBehavior<HealerBehaviorAsset>("Behavior_Healer", CardType.Healer);
 
             AssignDefaultPresentationVfx();
+            AssignDefaultDetailTextToBehaviorsInternal(onlyIfEmpty: true);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[CardBattle] 타입별 CardBehaviorAsset 4종 생성 완료.");
+        }
+
+        [MenuItem("CardGame/CardBattle/Assign Default Detail Text To Behaviors")]
+        public static void AssignDefaultDetailTextToBehaviorsMenu()
+        {
+            AssignDefaultDetailTextToBehaviorsInternal(onlyIfEmpty: true);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CardBattle] Behavior SO 상세 보기 기본 문구 할당 완료 (비어 있는 필드만).");
+        }
+
+        private static void AssignDefaultDetailTextToBehaviorsInternal(bool onlyIfEmpty)
+        {
+            ApplyDetailDefaults(LoadBehavior<NormalBehaviorAsset>("Behavior_Normal"), onlyIfEmpty);
+            ApplyDetailDefaults(LoadBehavior<RangedBehaviorAsset>("Behavior_Ranged"), onlyIfEmpty);
+            ApplyDetailDefaults(LoadBehavior<MusouBehaviorAsset>("Behavior_Musou"), onlyIfEmpty);
+            ApplyDetailDefaults(LoadBehavior<HealerBehaviorAsset>("Behavior_Healer"), onlyIfEmpty);
+        }
+
+        private static void ApplyDetailDefaults(CardBehaviorAsset behavior, bool onlyIfEmpty)
+        {
+            if (behavior == null)
+            {
+                return;
+            }
+
+            CardDetailContext.EnsureBehaviorDetailDefaults(behavior, onlyIfEmpty);
+            EditorUtility.SetDirty(behavior);
         }
 
         [MenuItem("CardGame/CardBattle/Assign Default Presentation Vfx")]
@@ -189,6 +217,7 @@ namespace CardGame.CardBattle.Editor
 
             asset.behaviorId = assetName.ToLowerInvariant();
             EnsurePresentation(asset);
+            CardDetailContext.EnsureBehaviorDetailDefaults(asset, onlyIfEmpty: true);
             EditorUtility.SetDirty(asset);
         }
 

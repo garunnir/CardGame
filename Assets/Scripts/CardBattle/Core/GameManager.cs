@@ -16,6 +16,7 @@ namespace CardGame.CardBattle.Core
     {
         [SerializeField] private UIManager uiManager;
         [SerializeField] private DragTargetingPresenter dragTargetingPresenter;
+        [SerializeField] private CardDetailOverlayPresenter cardDetailOverlay;
         [SerializeField] private CardBoardPresenter cardBoardPresenter;
 
         private BaseState currentState;
@@ -24,6 +25,7 @@ namespace CardGame.CardBattle.Core
         private CardPresentationService presentationService;
         private PresentationPlayer presentationPlayer;
         private BattleOrchestrator battleOrchestrator;
+        private CardInstanceId activeInspectCardId;
 
         public BattleField Field { get; } = new BattleField();
         public IInputProvider InputProvider => inputProvider;
@@ -47,10 +49,16 @@ namespace CardGame.CardBattle.Core
             {
                 cardBoardPresenter.InputHostsChanged += RefreshBoardInput;
             }
+
+            inputProvider.CardLongPressed += OnCardLongPressed;
+            inputProvider.CardLongPressReleased += OnCardLongPressReleased;
         }
 
         private void OnDestroy()
         {
+            inputProvider.CardLongPressed -= OnCardLongPressed;
+            inputProvider.CardLongPressReleased -= OnCardLongPressReleased;
+
             if (cardBoardPresenter != null)
             {
                 cardBoardPresenter.InputHostsChanged -= RefreshBoardInput;
@@ -85,6 +93,7 @@ namespace CardGame.CardBattle.Core
         /// <summary>로비/외부 덱 데이터로 전투 시작.</summary>
         public void InitializeBattle(List<CardDataAsset> playerDeck, List<CardDataAsset> enemyDeck)
         {
+            HideCardDetailOverlay();
             PlayerDeckData = SanitizeDeck(playerDeck, "Player");
             EnemyDeckData = SanitizeDeck(enemyDeck, "Enemy");
             ChangeState(new InitState(this));
@@ -200,6 +209,7 @@ namespace CardGame.CardBattle.Core
 
         public void RaiseGameOver(bool playerWin)
         {
+            HideCardDetailOverlay();
             uiManager?.ShowResultPopup(playerWin);
         }
 
@@ -273,6 +283,42 @@ namespace CardGame.CardBattle.Core
         {
             model = null;
             return cardBoardPresenter != null && cardBoardPresenter.TryGetModel(id, out model);
+        }
+
+        private void OnCardLongPressed(CardInstanceId cardId)
+        {
+            if (!TryGetModel(cardId, out var model))
+            {
+                return;
+            }
+
+            var phase = CardBoardPhase.Hidden;
+            if (cardBoardPresenter != null && cardBoardPresenter.TryGetEntity(cardId, out var entity))
+            {
+                phase = entity.Phase;
+            }
+
+            var layout = cardBoardPresenter != null ? cardBoardPresenter.Layout : null;
+            var cardBack = layout != null ? layout.GetCardBack(model.IsPlayerTeam) : null;
+            var context = CardDetailContext.Build(model, phase, cardBack);
+            cardDetailOverlay?.Show(context);
+            activeInspectCardId = cardId;
+        }
+
+        private void OnCardLongPressReleased(CardInstanceId cardId)
+        {
+            if (!activeInspectCardId.IsValid || activeInspectCardId != cardId)
+            {
+                return;
+            }
+
+            HideCardDetailOverlay();
+        }
+
+        private void HideCardDetailOverlay()
+        {
+            cardDetailOverlay?.Hide();
+            activeInspectCardId = default;
         }
 
         private float ResolveAttackPresentationTailDelay()

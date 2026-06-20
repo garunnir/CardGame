@@ -17,6 +17,11 @@ In `Update`/`FixedUpdate`/`LateUpdate`, physics callbacks, Jobs, or `ScriptableR
 Jobs (Burst): managed allocation prohibited — zero-alloc mandatory; verify unmanaged types.  
 If unverified: include `Unverified`, assumptions, expected risk, and how to verify.
 
+## Input (New Input System)
+* **PROHIBITED:** `UnityEngine.Input` in `Assets/` project code (see `docs/tech-stack.md`).
+* **Pointer / drag:** EventSystem + `InputSystemUIInputModule`; use `PointerEventData` from `IPointer*` / drag handlers — do not poll legacy Input for position.
+* **Polling (last resort):** `Mouse.current` / `Touchscreen.current` from `UnityEngine.InputSystem`.
+
 ## Pre-implementation Checklist (Agent only)
 
 Cover Rule 1 → Rule 5; add Rule 2 / Rule 6 when applicable.  

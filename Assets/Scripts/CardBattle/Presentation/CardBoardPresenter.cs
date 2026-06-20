@@ -101,6 +101,11 @@ namespace CardGame.CardBattle.Presentation
             return registry.TryGetModel(id, out model);
         }
 
+        public bool TryGetEntity(CardInstanceId id, out CardEntity entity)
+        {
+            return registry.TryGetEntity(id, out entity);
+        }
+
         private bool CanRunBoardOps()
         {
             if (layout == null || layout.cardEntityPrefab == null)

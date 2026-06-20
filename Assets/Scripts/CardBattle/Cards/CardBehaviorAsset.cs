@@ -17,6 +17,26 @@ namespace CardGame.CardBattle.Cards
         [ReadOnly]
         public CardType StrategyTypeDisplay => StrategyType;
 
+        [BoxGroup("상세 보기", centerLabel: true)]
+        [LabelText("타입 표시")]
+        [Tooltip("롱프레스 상세 UI. 비어 있으면 코드 기본값.")]
+        public string detailTypeLabel;
+
+        [BoxGroup("상세 보기")]
+        [LabelText("설명")]
+        [Tooltip("여러 줄 가능. 비어 있으면 전투 SO 수치 기반 자동 문구.")]
+        [TextArea(2, 6)]
+        public string detailDescription;
+
+        [BoxGroup("상세 보기")]
+        [LabelText("뒷면 이름")]
+        public string hiddenDetailLabel = "???";
+
+        [BoxGroup("상세 보기")]
+        [LabelText("뒷면 설명")]
+        [TextArea(1, 3)]
+        public string hiddenDetailDescription = "알 수 없음";
+
         public abstract CardType StrategyType { get; }
 
         public abstract void CollectAttackModules(IAttackModuleCollector collector);

@@ -12,6 +12,8 @@ namespace CardGame.CardBattle.Core
         private readonly HashSet<ICardInputHost> boundHostSet = new HashSet<ICardInputHost>();
 
         public event Action<CardInstanceId> CardSelected;
+        public event Action<CardInstanceId> CardLongPressed;
+        public event Action<CardInstanceId> CardLongPressReleased;
         public event Action<CardInstanceId, Vector2> CardDragStarted;
         public event Action<CardInstanceId, CardInstanceId, Vector2> CardDragMoved;
         public event Action<CardInstanceId, CardInstanceId, Vector2> CardDragEnded;
@@ -31,6 +33,26 @@ namespace CardGame.CardBattle.Core
             }
 
             CardSelected?.Invoke(cardId);
+        }
+
+        public void NotifyCardLongPressed(CardInstanceId cardId)
+        {
+            if (!cardId.IsValid)
+            {
+                return;
+            }
+
+            CardLongPressed?.Invoke(cardId);
+        }
+
+        public void NotifyCardLongPressReleased(CardInstanceId cardId)
+        {
+            if (!cardId.IsValid)
+            {
+                return;
+            }
+
+            CardLongPressReleased?.Invoke(cardId);
         }
 
         public void NotifyCardDragStarted(CardInstanceId sourceId, Vector2 pointerPosition)
@@ -87,6 +109,8 @@ namespace CardGame.CardBattle.Core
                 }
 
                 host.Clicked += OnHostClicked;
+                host.LongPressed += OnHostLongPressed;
+                host.LongPressReleased += OnHostLongPressReleased;
                 host.DragStarted += OnHostDragStarted;
                 host.DragMoved += OnHostDragMoved;
                 host.DragEnded += OnHostDragEnded;
@@ -102,6 +126,8 @@ namespace CardGame.CardBattle.Core
             }
 
             host.Clicked -= OnHostClicked;
+            host.LongPressed -= OnHostLongPressed;
+            host.LongPressReleased -= OnHostLongPressReleased;
             host.DragStarted -= OnHostDragStarted;
             host.DragMoved -= OnHostDragMoved;
             host.DragEnded -= OnHostDragEnded;
@@ -112,6 +138,22 @@ namespace CardGame.CardBattle.Core
             if (host != null && host.InstanceId.IsValid)
             {
                 NotifyCardSelected(host.InstanceId);
+            }
+        }
+
+        private void OnHostLongPressed(ICardInputHost host)
+        {
+            if (host != null && host.InstanceId.IsValid)
+            {
+                NotifyCardLongPressed(host.InstanceId);
+            }
+        }
+
+        private void OnHostLongPressReleased(ICardInputHost host)
+        {
+            if (host != null && host.InstanceId.IsValid)
+            {
+                NotifyCardLongPressReleased(host.InstanceId);
             }
         }
 
