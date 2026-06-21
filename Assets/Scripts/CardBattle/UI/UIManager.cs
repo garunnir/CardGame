@@ -21,6 +21,7 @@ namespace CardGame.CardBattle.UI
         [SerializeField] private GameObject winPanel;
         [SerializeField] private GameObject losePanel;
         [SerializeField] private Button restartButton;
+        [SerializeField] private Button loseRestartButton;
         [SerializeField] private Volume postProcessVolume;
         [SerializeField] private float bloomHealIntensity = 1.8f;
         [SerializeField] private float bloomAttackIntensity = 1.2f;
@@ -32,13 +33,27 @@ namespace CardGame.CardBattle.UI
         private void Awake()
         {
             ApplySortingOrder();
-            if (restartButton != null)
-            {
-                restartButton.onClick.AddListener(OnRestartClicked);
-            }
+            BindRestartButton(restartButton);
+            BindRestartButton(loseRestartButton);
 
             HideResultPanels();
             CacheBloomDefault();
+        }
+
+        private void BindRestartButton(Button button)
+        {
+            if (button != null)
+            {
+                button.onClick.AddListener(OnRestartClicked);
+            }
+        }
+
+        private void UnbindRestartButton(Button button)
+        {
+            if (button != null)
+            {
+                button.onClick.RemoveListener(OnRestartClicked);
+            }
         }
 
         private void OnDestroy()
@@ -47,10 +62,8 @@ namespace CardGame.CardBattle.UI
             bannerFadeCts?.Dispose();
             bannerFadeCts = null;
 
-            if (restartButton != null)
-            {
-                restartButton.onClick.RemoveListener(OnRestartClicked);
-            }
+            UnbindRestartButton(restartButton);
+            UnbindRestartButton(loseRestartButton);
         }
 
         public void ApplySortingOrder(int order = -1)

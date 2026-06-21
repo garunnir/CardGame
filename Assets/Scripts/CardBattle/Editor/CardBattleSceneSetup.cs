@@ -61,7 +61,7 @@ namespace CardGame.CardBattle.Editor
             audioAdapter.Configure(null, audioSource);
 
             WireUIManager(uiManager, canvasGo, turnBanner.text, turnBanner.group,
-                playerReserve, enemyReserve, winPanel.panel, losePanel.panel, winPanel.button);
+                playerReserve, enemyReserve, winPanel.panel, losePanel.panel, winPanel.button, losePanel.button);
             WireGameManager(gameManager, uiManager, boardPresenter, dragPresenter, cardDetailOverlay, heroArenaPresenter);
             WireVolume(uiManager, volume);
             WireBridge(systemsGo, gameManager);
@@ -692,7 +692,8 @@ namespace CardGame.CardBattle.Editor
             TextMeshProUGUI enemyReserve,
             GameObject winPanel,
             GameObject losePanel,
-            Button restartButton)
+            Button winRestartButton,
+            Button loseRestartButton)
         {
             var so = new SerializedObject(ui);
             so.FindProperty("rootCanvas").objectReferenceValue = canvas.GetComponent<Canvas>();
@@ -702,7 +703,8 @@ namespace CardGame.CardBattle.Editor
             so.FindProperty("enemyReserveText").objectReferenceValue = enemyReserve;
             so.FindProperty("winPanel").objectReferenceValue = winPanel;
             so.FindProperty("losePanel").objectReferenceValue = losePanel;
-            so.FindProperty("restartButton").objectReferenceValue = restartButton;
+            so.FindProperty("restartButton").objectReferenceValue = winRestartButton;
+            so.FindProperty("loseRestartButton").objectReferenceValue = loseRestartButton;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

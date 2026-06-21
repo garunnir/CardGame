@@ -2588,6 +2588,7 @@ MonoBehaviour:
   winPanel: {fileID: 1274463047}
   losePanel: {fileID: 354900142}
   restartButton: {fileID: 1036741609}
+  loseRestartButton: {fileID: 1706180938}
   postProcessVolume: {fileID: 544988080}
   bloomHealIntensity: 1.8
   bloomAttackIntensity: 1.2

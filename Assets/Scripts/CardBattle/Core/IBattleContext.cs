@@ -4,6 +4,7 @@ using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Input;
 using CardGame.CardBattle.Presentation;
 using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 namespace CardGame.CardBattle.Core
 {
@@ -34,6 +35,7 @@ namespace CardGame.CardBattle.Core
         UniTask BuildBoardViewsAsync();
         UniTask SyncAllViewsAsync();
         UniTask<bool> ExecuteBattleAsync(BattleActionRequest request);
+        UniTask<bool> ExecuteHeroStrikeTurnAsync(bool isPlayerTeam);
 
         void RaiseTurnBanner(bool isPlayerTurn);
         void RaiseSkipBanner(string message);
@@ -50,5 +52,6 @@ namespace CardGame.CardBattle.Core
         ICardBattleView FindView(CardInstanceId id);
         bool TryGetModel(CardInstanceId id, out CardModel model);
         bool CanTargetEnemyHero(CardModel attacker);
+        bool IsPointerOverEnemyHero(Vector2 screenPosition);
     }
 }

@@ -199,6 +199,25 @@ namespace CardGame.CardBattle.Core
             await presentationPlayer.PlayAsync(spec, sequence);
         }
 
+        /// <summary>병사 카드 없이 영웅만 교전하는 턴.</summary>
+        public UniTask<BattleOrchestrationResult> ExecuteHeroStrikeTurnAsync(
+            bool attackerIsPlayerTeam,
+            UIManager uiManager,
+            HeroArenaPresenter heroPresenter,
+            ICardViewRegistry viewRegistry,
+            System.Action<HeroStrikeResult> onHeroStrike = null,
+            System.Action syncHeroViews = null)
+        {
+            return FinalizeAfterAttackAsync(
+                attackerIsPlayerTeam,
+                default,
+                uiManager,
+                heroPresenter,
+                viewRegistry,
+                onHeroStrike,
+                syncHeroViews);
+        }
+
         private async UniTask<BattleOrchestrationResult> FinalizeAfterAttackAsync(
             bool attackerIsPlayerTeam,
             BattleActionResult actionResult,

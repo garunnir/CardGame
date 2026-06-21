@@ -57,6 +57,22 @@ namespace CardGame.CardBattle.Core
             return !HasCardRemaining(isPlayerTeam);
         }
 
+        /// <summary>전장 슬롯에 공격·타겟 가능한 카드가 있는지.</summary>
+        public bool HasTargetableCardOnBattlefield(bool isPlayerTeam)
+        {
+            var battlefield = GetBattlefield(isPlayerTeam);
+            for (var i = 0; i < SlotCount; i++)
+            {
+                var card = battlefield[i];
+                if (card != null && card.IsAlive && IsTargetableOnBattlefield(card))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool CanTeamAttack(bool isPlayerTeam)
         {
             if (IsCardPoolExhausted(isPlayerTeam))

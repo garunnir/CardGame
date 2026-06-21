@@ -30,7 +30,8 @@ namespace CardGame.CardBattle.Cards
 
     public bool ReceivesCounterAttack(AttackContext context) => _receivesCounterAttack;
 
-    public int CalculateCounterDamage(AttackContext context) => context.Target.AttackPower;
+    public int CalculateCounterDamage(AttackContext context, int primaryDamage) =>
+      context.Target.CurrentHp - primaryDamage;
   }
 
   public sealed class AdjacentSplashModule : ISecondaryDamageModule

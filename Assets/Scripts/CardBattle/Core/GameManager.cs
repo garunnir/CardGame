@@ -172,6 +172,32 @@ namespace CardGame.CardBattle.Core
             return true;
         }
 
+        public async UniTask<bool> ExecuteHeroStrikeTurnAsync(bool isPlayerTeam)
+        {
+            if (battleOrchestrator == null)
+            {
+                battleOrchestrator = CreateOrchestrator();
+            }
+
+            var result = await battleOrchestrator.ExecuteHeroStrikeTurnAsync(
+                isPlayerTeam,
+                uiManager,
+                heroArenaPresenter,
+                cardBoardPresenter,
+                onHeroStrike: _ => { },
+                syncHeroViews: SyncHeroViews);
+
+            SyncHeroViews();
+
+            if (!result.ContinueBattle)
+            {
+                ChangeState(new GameOverState(this, result.PlayerWon));
+                return false;
+            }
+
+            return true;
+        }
+
         public void ChangeState(BaseState nextState)
         {
             stateGeneration++;
@@ -227,6 +253,16 @@ namespace CardGame.CardBattle.Core
         public bool CanTargetEnemyHero(CardModel attacker)
         {
             return CardTargetingRules.CanTargetEnemyHero(Field, HeroArena, attacker);
+        }
+
+        public bool IsPointerOverEnemyHero(Vector2 screenPosition)
+        {
+            if (heroArenaPresenter == null)
+            {
+                return false;
+            }
+
+            return heroArenaPresenter.TryRaycastEnemyHero(screenPosition, null, out _);
         }
 
         public void RequestHeroTarget()

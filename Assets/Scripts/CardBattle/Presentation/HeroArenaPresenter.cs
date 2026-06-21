@@ -75,11 +75,7 @@ namespace CardGame.CardBattle.Presentation
             }
 
             WireEnemyShortClick();
-
-            if (!enemyTargetEnabled)
-            {
-                SetEnemyHeroTargetEnabled(false);
-            }
+            SetEnemyHeroTargetEnabled(enemyTargetEnabled);
         }
 
         public HeroModel FindHero(HeroInstanceId id)
@@ -332,6 +328,36 @@ namespace CardGame.CardBattle.Presentation
             }
 
             enemyHeroShortClicked?.Invoke();
+        }
+
+        public bool TryRaycastEnemyHero(Vector2 screenPosition, Camera camera, out HeroEntity hero)
+        {
+            hero = null;
+            if (enemyHeroEntity == null || !enemyHeroEntity.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            var cam = camera != null ? camera : Camera.main;
+            if (cam == null)
+            {
+                return false;
+            }
+
+            var ray = cam.ScreenPointToRay(screenPosition);
+            if (!Physics.Raycast(ray, out var hit, 200f))
+            {
+                return false;
+            }
+
+            if (hit.collider == null
+                || !hit.collider.transform.IsChildOf(enemyHeroEntity.transform))
+            {
+                return false;
+            }
+
+            hero = enemyHeroEntity;
+            return true;
         }
 
         private void OnDestroy()

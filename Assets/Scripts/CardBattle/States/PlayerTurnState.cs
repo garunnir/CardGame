@@ -28,29 +28,37 @@ namespace CardGame.CardBattle.States
         private async UniTaskVoid EnterAsync()
         {
             var generation = Context.StateGeneration;
-            await TurnStartFlow.RunAsync(
+            var turnAction = await TurnFlow.RunStartAndDetectAsync(
                 Context,
                 Context.Field.PlayerBattlefield,
                 isPlayerTurn: true,
                 generation);
 
-            if (!IsTransitionCurrent(generation))
+            if (turnAction == null)
             {
                 return;
             }
 
-            if (!Context.Field.CanTeamAttack(true))
+            if (turnAction.Value.IsAutomatic)
             {
-                Context.RaiseSkipBanner("병사 전멸 — 턴 스킵");
-                await UniTask.Delay(System.TimeSpan.FromSeconds(0.8f));
-                if (IsTransitionCurrent(generation))
+                var finished = await TurnActionFlow.RunAutomaticAsync(
+                    Context,
+                    turnAction.Value,
+                    () => IsTransitionCurrent(generation));
+                if (!finished || !IsTransitionCurrent(generation))
                 {
-                    Context.ChangeState(new EnemyTurnState(Context));
+                    return;
                 }
 
+                Context.ChangeState(new EnemyTurnState(Context));
                 return;
             }
 
+            BeginCardAttackInput();
+        }
+
+        private void BeginCardAttackInput()
+        {
             Context.InputProvider.SetEnabled(true);
             Context.InputProvider.CardSelected -= OnCardSelected;
             Context.InputProvider.CardSelected += OnCardSelected;
@@ -97,12 +105,11 @@ namespace CardGame.CardBattle.States
         private void OnHeroTargetRequested()
         {
             if (!TryGetSelectedAttacker(out var attacker)
-                || !Context.CanTargetEnemyHero(attacker))
+                || !TryBeginHeroAttack(attacker))
             {
                 return;
             }
 
-            Context.PendingAction = new BattleActionRequest(attacker, Context.HeroArena.EnemyHero);
             Context.ChangeState(new BattleState(Context, true));
         }
 
@@ -172,12 +179,23 @@ namespace CardGame.CardBattle.States
             }
 
             Context.TryGetModel(hoverTargetId, out var hoverTarget);
-            var isValidHover = targetingPolicy.IsValidHover(attacker, hoverTarget);
-            var hoverView = hoverTargetId.IsValid ? Context.FindView(hoverTargetId) : null;
+            var isValidCardHover = targetingPolicy.IsValidHover(attacker, hoverTarget);
+            var isValidHeroHover = IsValidHeroDragHover(attacker, pointerPosition);
+
+            if (isValidCardHover)
+            {
+                var hoverView = Context.FindView(hoverTargetId);
+                Context.DragTargetingPresenter?.UpdateDrag(
+                    pointerPosition,
+                    hoverView != null ? hoverView.ViewTransform : null,
+                    true);
+                return;
+            }
+
             Context.DragTargetingPresenter?.UpdateDrag(
                 pointerPosition,
-                hoverView != null ? hoverView.ViewTransform : null,
-                isValidHover);
+                null,
+                isValidHeroHover);
         }
 
         private void OnCardDragEnded(CardInstanceId sourceId, CardInstanceId dropTargetId, Vector2 pointerPosition)
@@ -199,7 +217,41 @@ namespace CardGame.CardBattle.States
             {
                 Context.PendingAction = action;
                 Context.ChangeState(new BattleState(Context, true));
+                return;
             }
+
+            if (TryBeginHeroAttackFromDrag(attacker, pointerPosition))
+            {
+                Context.ChangeState(new BattleState(Context, true));
+            }
+        }
+
+        private bool IsValidHeroDragHover(CardModel attacker, Vector2 pointerPosition)
+        {
+            return attacker != null
+                && Context.CanTargetEnemyHero(attacker)
+                && Context.IsPointerOverEnemyHero(pointerPosition);
+        }
+
+        private bool TryBeginHeroAttack(CardModel attacker)
+        {
+            if (attacker == null || !Context.CanTargetEnemyHero(attacker))
+            {
+                return false;
+            }
+
+            Context.PendingAction = new BattleActionRequest(attacker, Context.HeroArena.EnemyHero);
+            return true;
+        }
+
+        private bool TryBeginHeroAttackFromDrag(CardModel attacker, Vector2 pointerPosition)
+        {
+            if (!Context.IsPointerOverEnemyHero(pointerPosition))
+            {
+                return false;
+            }
+
+            return TryBeginHeroAttack(attacker);
         }
     }
 }

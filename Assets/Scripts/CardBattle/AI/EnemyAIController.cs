@@ -103,13 +103,25 @@ namespace CardGame.CardBattle.AI
 
             var playerCardsExhausted = field.IsCardPoolExhausted(true);
 
+            var attackerIndices = new List<int>(enemyBattlefield.Length);
             for (var i = 0; i < enemyBattlefield.Length; i++)
             {
                 var attacker = enemyBattlefield[i];
-                if (attacker == null || !attacker.IsAlive)
+                if (attacker != null && attacker.IsAlive)
                 {
-                    continue;
+                    attackerIndices.Add(i);
                 }
+            }
+
+            attackerIndices.Sort((a, b) =>
+            {
+                var hpCompare = enemyBattlefield[b].CurrentHp.CompareTo(enemyBattlefield[a].CurrentHp);
+                return hpCompare != 0 ? hpCompare : a.CompareTo(b);
+            });
+
+            for (var i = 0; i < attackerIndices.Count; i++)
+            {
+                var attacker = enemyBattlefield[attackerIndices[i]];
 
                 if (playerCardsExhausted
                     && CardTargetingRules.CanTargetPlayerHero(field, heroArena, attacker))

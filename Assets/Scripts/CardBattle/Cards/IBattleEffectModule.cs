@@ -8,7 +8,7 @@ namespace CardGame.CardBattle.Cards
   public interface ICounterAttackModule
   {
     bool ReceivesCounterAttack(AttackContext context);
-    int CalculateCounterDamage(AttackContext context);
+    int CalculateCounterDamage(AttackContext context, int primaryDamage);
   }
 
   public interface ISecondaryDamageModule
@@ -54,7 +54,7 @@ namespace CardGame.CardBattle.Cards
         && collector.Counter.ReceivesCounterAttack(context)
         && context.Target.CurrentHp > primaryDamage)
       {
-        counterDamage = collector.Counter.CalculateCounterDamage(context);
+        counterDamage = collector.Counter.CalculateCounterDamage(context, primaryDamage);
       }
 
       var secondary = collector.Secondary?.TryGetSecondaryDamage(context) ?? default;
@@ -90,9 +90,11 @@ namespace CardGame.CardBattle.Cards
       var primaryDamage = collector.Primary?.CalculatePrimaryDamage(context) ?? 0;
       var counterDamage = 0;
 
-      if (collector.Counter != null && collector.Counter.ReceivesCounterAttack(context))
+      if (collector.Counter != null
+        && collector.Counter.ReceivesCounterAttack(context)
+        && context.Target.CurrentHp > primaryDamage)
       {
-        counterDamage = collector.Counter.CalculateCounterDamage(context);
+        counterDamage = collector.Counter.CalculateCounterDamage(context, primaryDamage);
       }
 
       var secondary = collector.Secondary?.TryGetSecondaryDamage(context) ?? default;

@@ -15,6 +15,8 @@ namespace CardGame.CardBattle.States
             int generation)
         {
             context.IsPlayerTurn = isPlayerTurn;
+            context.Field.ProcessDeathsAndRefill(true);
+            context.Field.ProcessDeathsAndRefill(false);
             await context.SyncAllViewsAsync();
 
             if (!context.IsStateGenerationCurrent(generation))

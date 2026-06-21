@@ -24,21 +24,21 @@ namespace CardGame.CardBattle.States
         {
             var generation = Context.StateGeneration;
             Context.InputProvider.SetEnabled(false);
-            await TurnStartFlow.RunAsync(
+            var turnAction = await TurnFlow.RunStartAndDetectAsync(
                 Context,
                 Context.Field.EnemyBattlefield,
                 isPlayerTurn: false,
                 generation);
 
-            if (!IsTransitionCurrent(generation))
+            if (turnAction == null)
             {
                 return;
             }
 
-            await RunEnemyTurnAsync(generation);
+            await RunEnemyTurnAsync(generation, turnAction.Value);
         }
 
-        private async UniTask RunEnemyTurnAsync(int generation)
+        private async UniTask RunEnemyTurnAsync(int generation, TurnActionEvent turnAction)
         {
             if (running)
             {
@@ -54,26 +54,16 @@ namespace CardGame.CardBattle.States
                     return;
                 }
 
-                if (!Context.Field.CanTeamAttack(false))
+                var finished = turnAction.IsAutomatic
+                    ? await TurnActionFlow.RunAutomaticAsync(
+                        Context,
+                        turnAction,
+                        () => IsTransitionCurrent(generation))
+                    : await ExecuteEnemyCardAttackAsync();
+
+                if (!finished || !IsTransitionCurrent(generation))
                 {
-                    Context.RaiseSkipBanner("적 병사 전멸 — 턴 스킵");
-                    await UniTask.Delay(System.TimeSpan.FromSeconds(0.8f));
                     return;
-                }
-
-                var actions = EnemyAIController.BuildTurnActions(
-                    Context.Field,
-                    Context.HeroArena,
-                    Context.Field.EnemyBattlefield,
-                    Context.Field.PlayerBattlefield);
-
-                if (actions.Count > 0)
-                {
-                    var finished = await Context.ExecuteBattleAsync(actions[0]);
-                    if (!finished || !IsTransitionCurrent(generation))
-                    {
-                        return;
-                    }
                 }
             }
             finally
@@ -86,6 +76,22 @@ namespace CardGame.CardBattle.States
                     Context.ChangeState(new PlayerTurnState(Context));
                 }
             }
+        }
+
+        private async UniTask<bool> ExecuteEnemyCardAttackAsync()
+        {
+            var actions = EnemyAIController.BuildTurnActions(
+                Context.Field,
+                Context.HeroArena,
+                Context.Field.EnemyBattlefield,
+                Context.Field.PlayerBattlefield);
+
+            if (actions.Count > 0)
+            {
+                return await Context.ExecuteBattleAsync(actions[0]);
+            }
+
+            return true;
         }
     }
 }
