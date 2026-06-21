@@ -2559,6 +2559,7 @@ GameObject:
   - component: {fileID: 1303836129}
   - component: {fileID: 1303836128}
   - component: {fileID: 1303836125}
+  - component: {fileID: 1303836130}
   m_Layer: 0
   m_Name: BattleCanvas
   m_TagString: Untagged
@@ -2679,6 +2680,24 @@ MonoBehaviour:
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
   m_PresetInfoIsWorld: 0
+--- !u!114 &1303836130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1303836124}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c4e9a2b1d8f4036a5e6b7c8d9f0a1b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Input.ScreenClickFeedbackPresenter
+  rootCanvas: {fileID: 1303836127}
+  spawnRoot: {fileID: 0}
+  clickEffectPrefab: {fileID: 1590415177872986601, guid: acdb90624a404aa438447006f1026065, type: 3}
+  spawnOffset: {x: 0, y: 2, z: 0}
+  autoDestroySeconds: 0.25
+  worldSpawnDistance: 10
 --- !u!1 &1338167041
 GameObject:
   m_ObjectHideFlags: 0
