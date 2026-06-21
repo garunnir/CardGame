@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: ProjectilePresentation_Heal
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Presentation.ProjectilePresentationAsset
   projectileVfxPrefab: {fileID: 1590415177872986601, guid: acdb90624a404aa438447006f1026065, type: 3}
-  launchSfx: {fileID: 8300000, guid: 3becec1909f194046945d85ac1077772, type: 3}
+  launchSfx: {fileID: 8300000, guid: d8d04c6f80a1140db85ede568dab1f51, type: 3}
   flightDuration: 0.4
   pathKind: 1
   arcHeight: 0.5
-  impactSfx: {fileID: 0}
+  impactSfx: {fileID: 8300000, guid: 32d4b1811dda14a6cb9e059ee8ad17d2, type: 3}
   impactVfxPrefab: {fileID: 8771972552311404799, guid: bbf9e36a48d6c5648a13889afab076fd, type: 3}

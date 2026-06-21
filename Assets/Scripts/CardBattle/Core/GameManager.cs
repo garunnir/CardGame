@@ -113,7 +113,10 @@ namespace CardGame.CardBattle.Core
 
         public void ConfigurePresentation(BattleAudioAdapter audioAdapter)
         {
-            presentationService = new CardPresentationService(audioAdapter);
+            var statFloatingText = cardBoardPresenter != null
+                ? cardBoardPresenter.Layout?.statFloatingTextPresentation
+                : null;
+            presentationService = new CardPresentationService(audioAdapter, statFloatingText);
             presentationPlayer = new PresentationPlayer();
             battleOrchestrator = CreateOrchestrator();
         }

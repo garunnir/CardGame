@@ -15,6 +15,8 @@ namespace CardGame.CardBattle.Editor
         public const string PrefabPath = "Assets/Prefabs/CardBattle/CardEntity.prefab";
         public const string HeroPrefabPath = "Assets/Prefabs/CardBattle/HeroEntity.prefab";
         public const string LayoutPath = "Assets/Resources/CardBattle/BattleLayout_Default.asset";
+        public const string StatFloatingTextPath =
+            "Assets/Resources/CardBattle/Presentation/StatFloatingText_Default.asset";
         public const string CardFaceMaterialPath = "Assets/Materials/CardBattle/CardFace_Default.mat";
         public const string CardFaceShaderPath = "Assets/Shaders/CardBattle/CardFaceUnlit.shader";
         private const float CardFaceAlphaCutoff = 0.5f;
@@ -695,10 +697,16 @@ namespace CardGame.CardBattle.Editor
         public static BattleLayoutConfig EnsureBattleLayoutAsset()
         {
             var existing = AssetDatabase.LoadAssetAtPath<BattleLayoutConfig>(LayoutPath);
+            var statFloatingText = EnsureStatFloatingTextPresentationAsset();
             if (existing != null)
             {
                 existing.cardEntityPrefab = EnsureCardEntityPrefab();
                 existing.heroEntityPrefab = EnsureHeroEntityPrefab();
+                if (existing.statFloatingTextPresentation == null)
+                {
+                    existing.statFloatingTextPresentation = statFloatingText;
+                }
+
                 EditorUtility.SetDirty(existing);
                 return existing;
             }
@@ -708,6 +716,7 @@ namespace CardGame.CardBattle.Editor
             var layout = ScriptableObject.CreateInstance<BattleLayoutConfig>();
             layout.cardEntityPrefab = EnsureCardEntityPrefab();
             layout.heroEntityPrefab = EnsureHeroEntityPrefab();
+            layout.statFloatingTextPresentation = statFloatingText;
             if (layout.cardEntityPrefab == null || layout.heroEntityPrefab == null)
             {
                 Debug.LogError("[CardBattle] BattleLayout 생성 중단 — CardEntity/HeroEntity 프리팹이 없습니다.");
@@ -717,6 +726,52 @@ namespace CardGame.CardBattle.Editor
             AssetDatabase.CreateAsset(layout, LayoutPath);
             AssetDatabase.SaveAssets();
             return layout;
+        }
+
+        [MenuItem("CardGame/CardBattle/Create Default Stat Floating Text Asset")]
+        public static void CreateDefaultStatFloatingTextAssetMenu()
+        {
+            var asset = EnsureStatFloatingTextPresentationAsset();
+            var layout = AssetDatabase.LoadAssetAtPath<BattleLayoutConfig>(LayoutPath);
+            if (layout != null && layout.statFloatingTextPresentation == null)
+            {
+                layout.statFloatingTextPresentation = asset;
+                EditorUtility.SetDirty(layout);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CardBattle] Stat Floating Text SO: " + AssetDatabase.GetAssetPath(asset));
+        }
+
+        public static StatFloatingTextPresentationAsset EnsureStatFloatingTextPresentationAsset()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<StatFloatingTextPresentationAsset>(StatFloatingTextPath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            EnsureFolder("Assets/Resources/CardBattle/Presentation");
+            var asset = ScriptableObject.CreateInstance<StatFloatingTextPresentationAsset>();
+            AssetDatabase.CreateAsset(asset, StatFloatingTextPath);
+            return asset;
+        }
+
+        private static void EnsureFolder(string folderPath)
+        {
+            if (AssetDatabase.IsValidFolder(folderPath))
+            {
+                return;
+            }
+
+            var parent = Path.GetDirectoryName(folderPath)?.Replace('\\', '/');
+            var leaf = Path.GetFileName(folderPath);
+            if (!string.IsNullOrEmpty(parent) && !AssetDatabase.IsValidFolder(parent))
+            {
+                EnsureFolder(parent);
+            }
+
+            AssetDatabase.CreateFolder(parent, leaf);
         }
 
         private static bool NeedsPrefabRebuild(GameObject root)

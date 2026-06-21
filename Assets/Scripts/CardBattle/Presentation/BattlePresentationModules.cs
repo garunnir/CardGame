@@ -35,6 +35,10 @@ namespace CardGame.CardBattle.Presentation
                 PresentationCueKind.HitShake,
                 floatParam: hitShakeStrength,
                 subjectId: targetId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                targetId,
+                spec.CardResolution.PrimaryDamage);
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: targetId,
@@ -73,6 +77,10 @@ namespace CardGame.CardBattle.Presentation
                 PresentationCueKind.HitShake,
                 floatParam: hitShakeStrength,
                 subjectHeroId: heroId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                heroId,
+                spec.HeroAttackOutcome.PrimaryDamage);
             AppendHeroStatCues(spec, heroId, cues);
         }
 
@@ -137,6 +145,10 @@ namespace CardGame.CardBattle.Presentation
             cues.Add(new PresentationCue(
                 PresentationCueKind.HitShake,
                 subjectId: targetId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                targetId,
+                spec.CardResolution.PrimaryDamage);
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: targetId,
@@ -179,6 +191,10 @@ namespace CardGame.CardBattle.Presentation
                 PresentationCueKind.HitShake,
                 floatParam: DefaultHitShake,
                 subjectHeroId: heroId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                heroId,
+                spec.HeroAttackOutcome.PrimaryDamage);
             CardVsHeroMeleePresentationModule.AppendHeroStatCues(spec, heroId, cues);
         }
     }
@@ -201,6 +217,10 @@ namespace CardGame.CardBattle.Presentation
             cues.Add(new PresentationCue(
                 PresentationCueKind.HitShake,
                 subjectId: attackerId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                attackerId,
+                spec.CardResolution.CounterDamage);
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: attackerId,
@@ -228,6 +248,10 @@ namespace CardGame.CardBattle.Presentation
             cues.Add(new PresentationCue(
                 PresentationCueKind.HitShake,
                 subjectId: attackerId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                attackerId,
+                spec.HeroAttackOutcome.CounterDamage);
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: attackerId,
@@ -267,6 +291,10 @@ namespace CardGame.CardBattle.Presentation
             cues.Add(new PresentationCue(
                 PresentationCueKind.HitShake,
                 subjectId: secondaryId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                secondaryId,
+                spec.CardResolution.Secondary.Damage);
             cues.Add(new PresentationCue(
                 PresentationCueKind.HpBarTween,
                 subjectId: secondaryId,
@@ -324,6 +352,10 @@ namespace CardGame.CardBattle.Presentation
                 PresentationCueKind.HitShake,
                 floatParam: hitShakeStrength,
                 subjectHeroId: defenderId));
+            PresentationStatFeedback.AppendDamageFloatingText(
+                cues,
+                defenderId,
+                spec.HeroStrikeResult.DamageDealt);
             CardVsHeroMeleePresentationModule.AppendHeroStatCues(spec, defenderId, cues);
 
             if (spec.HeroStrikeResult.MpGained > 0

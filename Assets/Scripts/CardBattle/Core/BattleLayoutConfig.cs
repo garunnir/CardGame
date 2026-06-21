@@ -1,5 +1,7 @@
 using CardGame.CardBattle.Cards;
 
+using CardGame.CardBattle.Presentation;
+
 using Sirenix.OdinInspector;
 
 using UnityEngine;
@@ -115,6 +117,14 @@ namespace CardGame.CardBattle.Core
         [Min(0.05f)]
 
         public float hpChangeDuration = 0.35f;
+
+
+
+        [BoxGroup("연출")]
+
+        [LabelText("피해/힐 플로팅 텍스트")]
+
+        public StatFloatingTextPresentationAsset statFloatingTextPresentation;
 
 
 

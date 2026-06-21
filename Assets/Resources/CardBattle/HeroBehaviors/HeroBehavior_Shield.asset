@@ -18,5 +18,5 @@ MonoBehaviour:
   shieldAmount: 5
   presentation:
     shieldBuffSfx: {fileID: 0}
-    shieldBuffVfxPrefab: {fileID: 0}
+    shieldBuffVfxPrefab: {fileID: 4772634663576830964, guid: e1385af346f4e624eb313ec1ea4fcd7e, type: 3}
     buffBloomIntensity: 0.15

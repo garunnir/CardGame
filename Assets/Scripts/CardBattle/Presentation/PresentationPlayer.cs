@@ -386,6 +386,14 @@ namespace CardGame.CardBattle.Presentation
                     await PlayHitShakeAsync(ResolveShakeView(spec, cue), cue.FloatParam);
                     break;
 
+                case PresentationCueKind.PlayStatFloatingText:
+                    await ExecuteStatFloatingTextCueAsync(
+                        cue,
+                        spec.Presentation,
+                        spec.CardViewRegistry,
+                        spec.HeroPresenter);
+                    break;
+
                 case PresentationCueKind.HpBarTween:
                     await PlayHpBarTweenAsync(spec.GetCardView(cue.SubjectId), cue.HpFrom, cue.HpTo);
                     break;

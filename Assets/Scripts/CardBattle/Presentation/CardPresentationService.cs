@@ -14,10 +14,14 @@ namespace CardGame.CardBattle.Presentation
         private const float DefaultVfxLifetime = 2f;
 
         private readonly BattleAudioAdapter audio;
+        private readonly StatFloatingTextPresentationAsset statFloatingText;
 
-        public CardPresentationService(BattleAudioAdapter audioAdapter)
+        public CardPresentationService(
+            BattleAudioAdapter audioAdapter,
+            StatFloatingTextPresentationAsset statFloatingTextPresentation = null)
         {
             audio = audioAdapter;
+            statFloatingText = statFloatingTextPresentation ?? StatFloatingTextPresentationAsset.LoadDefault();
         }
 
         public UniTask FlyProjectileAsync(
@@ -57,7 +61,7 @@ namespace CardGame.CardBattle.Presentation
             StatFeedbackKind kind,
             int amount)
         {
-            return BattleStatFloatingTextPresenter.ShowAsync(targetView, kind, amount);
+            return BattleStatFloatingTextPresenter.ShowAsync(statFloatingText, targetView, kind, amount);
         }
 
         public void PlayTurnStartEffectsImmediate(

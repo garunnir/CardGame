@@ -14,6 +14,7 @@ namespace CardGame.CardBattle.Cards
         public const float LabelLocalZ = 0.02f;
         public const int NameLabelSortingOrder = 2;
         public const int HpLabelSortingOrder = 3;
+        public const int FloatingTextSortingOrder = 8;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int MainTexStId = Shader.PropertyToID("_MainTex_ST");

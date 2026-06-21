@@ -11,5 +11,6 @@ namespace CardGame.CardBattle.Cards
         public const int Portrait = 5;
         public const int NameLabel = 6;
         public const int StatLabel = 7;
+        public const int FloatingText = 10;
     }
 }
