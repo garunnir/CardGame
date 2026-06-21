@@ -40,12 +40,12 @@ namespace CardGame.CardBattle.Presentation
                     var path = new[] { from.position, mid, targetPosition };
                     var tween = transform.DOPath(path, flightDuration, PathType.CatmullRom)
                         .SetEase(Ease.Linear);
-                    await AwaitTweenAsync(tween, cancellationToken);
+                    await PresentationTweenAwaiter.AwaitAsync(tween, cancellationToken);
                 }
                 else
                 {
                     var tween = transform.DOMove(targetPosition, flightDuration).SetEase(Ease.Linear);
-                    await AwaitTweenAsync(tween, cancellationToken);
+                    await PresentationTweenAwaiter.AwaitAsync(tween, cancellationToken);
                 }
             }
             finally
@@ -68,29 +68,5 @@ namespace CardGame.CardBattle.Presentation
             projectile.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
         }
 
-        private static UniTask AwaitTweenAsync(Tween tween, CancellationToken cancellationToken)
-        {
-            if (tween == null || !tween.IsActive())
-            {
-                return UniTask.CompletedTask;
-            }
-
-            var tcs = new UniTaskCompletionSource();
-            tween.OnComplete(() => tcs.TrySetResult());
-            tween.OnKill(() => tcs.TrySetResult());
-
-            if (cancellationToken.CanBeCanceled)
-            {
-                cancellationToken.Register(() =>
-                {
-                    if (tween.IsActive())
-                    {
-                        tween.Kill();
-                    }
-                });
-            }
-
-            return tcs.Task;
-        }
     }
 }

@@ -15,11 +15,7 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            cues.Add(new PresentationCue(
-                PresentationCueKind.PlayStatFloatingText,
-                subjectId: subjectId,
-                statFeedbackKind: StatFeedbackKind.Damage,
-                statAmount: damage));
+            AppendFloatingText(cues, StatFeedbackKind.Damage, damage, subjectId: subjectId);
         }
 
         public static void AppendDamageFloatingText(
@@ -32,11 +28,22 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
+            AppendFloatingText(cues, StatFeedbackKind.Damage, damage, subjectHeroId: subjectHeroId);
+        }
+
+        private static void AppendFloatingText(
+            IList<PresentationCue> cues,
+            StatFeedbackKind kind,
+            int amount,
+            CardInstanceId subjectId = default,
+            HeroInstanceId subjectHeroId = default)
+        {
             cues.Add(new PresentationCue(
                 PresentationCueKind.PlayStatFloatingText,
+                subjectId: subjectId,
                 subjectHeroId: subjectHeroId,
-                statFeedbackKind: StatFeedbackKind.Damage,
-                statAmount: damage));
+                statFeedbackKind: kind,
+                statAmount: amount));
         }
     }
 }

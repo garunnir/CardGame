@@ -11,6 +11,9 @@ namespace CardGame.CardBattle.Presentation
     {
         private const string OverlayShaderName = "TextMeshPro/Distance Field Overlay";
 
+        private static Shader cachedOverlayShader;
+        private static bool overlayShaderResolved;
+
         public static async UniTask ShowAsync(
             StatFloatingTextPresentationAsset settings,
             IPresentationTargetView target,
@@ -59,8 +62,8 @@ namespace CardGame.CardBattle.Presentation
             try
             {
                 await UniTask.WhenAll(
-                    AwaitTweenAsync(moveTween, cancellationToken),
-                    AwaitTweenAsync(fadeTween, cancellationToken));
+                    PresentationTweenAwaiter.AwaitAsync(moveTween, cancellationToken),
+                    PresentationTweenAwaiter.AwaitAsync(fadeTween, cancellationToken));
             }
             finally
             {
@@ -83,7 +86,7 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var overlayShader = Shader.Find(OverlayShaderName);
+            var overlayShader = ResolveOverlayShader();
             if (overlayShader == null)
             {
                 return;
@@ -96,15 +99,9 @@ namespace CardGame.CardBattle.Presentation
             StatFloatingTextPresentationAsset settings,
             Transform targetRoot)
         {
-            var baseline = CardFaceView.FloatingTextSortingOrder;
-            if (targetRoot.GetComponent<HeroEntity>() != null)
-            {
-                baseline = HeroVisualSorting.FloatingText;
-            }
-            else if (targetRoot.GetComponent<CardEntity>() != null)
-            {
-                baseline = CardFaceView.FloatingTextSortingOrder;
-            }
+            var baseline = targetRoot.GetComponent<HeroEntity>() != null
+                ? HeroVisualSorting.FloatingText
+                : CardFaceView.FloatingTextSortingOrder;
 
             return settings.sortingOrder > 0
                 ? Mathf.Max(settings.sortingOrder, baseline)
@@ -181,16 +178,28 @@ namespace CardGame.CardBattle.Presentation
                 return null;
             }
 
-            var labels = root.GetComponentsInChildren<TextMeshPro>(true);
-            for (var i = 0; i < labels.Length; i++)
+            if (root.TryGetComponent<CardEntity>(out _))
             {
-                if (labels[i].name == "HpLabel")
-                {
-                    return labels[i].transform;
-                }
+                return root.GetComponent<ICardMotionHost>()?.HpLabel?.transform;
+            }
+
+            if (root.TryGetComponent<HeroEntity>(out _))
+            {
+                return root.GetComponent<IHeroMotionHost>()?.HpLabel?.transform;
             }
 
             return null;
+        }
+
+        private static Shader ResolveOverlayShader()
+        {
+            if (!overlayShaderResolved)
+            {
+                cachedOverlayShader = Shader.Find(OverlayShaderName);
+                overlayShaderResolved = true;
+            }
+
+            return cachedOverlayShader;
         }
 
         private static bool TryGetDisplay(
@@ -217,29 +226,5 @@ namespace CardGame.CardBattle.Presentation
             }
         }
 
-        private static UniTask AwaitTweenAsync(Tween tween, CancellationToken cancellationToken)
-        {
-            if (tween == null || !tween.IsActive())
-            {
-                return UniTask.CompletedTask;
-            }
-
-            var tcs = new UniTaskCompletionSource();
-            tween.OnComplete(() => tcs.TrySetResult());
-            tween.OnKill(() => tcs.TrySetResult());
-
-            if (cancellationToken.CanBeCanceled)
-            {
-                cancellationToken.Register(() =>
-                {
-                    if (tween.IsActive())
-                    {
-                        tween.Kill();
-                    }
-                });
-            }
-
-            return tcs.Task;
-        }
     }
 }

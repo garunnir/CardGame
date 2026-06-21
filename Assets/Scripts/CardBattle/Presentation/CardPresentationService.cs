@@ -269,41 +269,33 @@ namespace CardGame.CardBattle.Presentation
         private void PlayClipOnTarget(AudioClip clip, GameObject vfxPrefab, IPresentationTargetView view)
         {
             audio?.PlaySfx(clip);
-            SpawnVfxOnTarget(vfxPrefab, view);
-        }
-
-        private static void SpawnVfxOnTarget(GameObject prefab, IPresentationTargetView view)
-        {
-            if (prefab == null || view?.ViewTransform == null)
-            {
-                return;
-            }
-
-            var anchor = view.ViewTransform;
-            var instance = UnityEngine.Object.Instantiate(prefab, anchor.position, anchor.rotation);
-            UnityEngine.Object.Destroy(instance, DefaultVfxLifetime);
+            SpawnVfxAtTarget(vfxPrefab, view?.ViewTransform);
         }
 
         private void PlayAttackClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
         {
             audio?.PlaySfx(clip);
-            SpawnVfx(vfxPrefab, view);
+            SpawnVfxAtTarget(vfxPrefab, view?.ViewTransform);
         }
 
         private void PlayClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
         {
             audio?.PlaySfx(clip);
-            SpawnVfx(vfxPrefab, view);
+            SpawnVfxAtTarget(vfxPrefab, view?.ViewTransform);
         }
 
-        private static void SpawnVfx(GameObject prefab, ICardBattleView view)
+        private static void SpawnVfxOnTarget(GameObject prefab, IPresentationTargetView view)
         {
-            if (prefab == null || view == null)
+            SpawnVfxAtTarget(prefab, view?.ViewTransform);
+        }
+
+        private static void SpawnVfxAtTarget(GameObject prefab, Transform anchor)
+        {
+            if (prefab == null || anchor == null)
             {
                 return;
             }
 
-            var anchor = view.ViewTransform;
             var instance = UnityEngine.Object.Instantiate(prefab, anchor.position, anchor.rotation);
             UnityEngine.Object.Destroy(instance, DefaultVfxLifetime);
         }
