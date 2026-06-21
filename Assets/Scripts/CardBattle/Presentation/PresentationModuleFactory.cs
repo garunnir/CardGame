@@ -60,11 +60,10 @@ namespace CardGame.CardBattle.Presentation
 
             switch (behavior)
             {
-                case RangedBehaviorAsset ranged:
-                    collector.Add(new CardVsHeroMeleePresentationModule(
-                        0f,
-                        0.12f));
+                case RangedBehaviorAsset _:
+                    collector.Add(new RangedCardVsHeroPresentationModule());
                     collector.Add(new HeroCardCounterPresentationModule());
+                    collector.Add(new DefaultCameraShakePresentationModule());
                     break;
                 default:
                     var dash = behavior is NormalBehaviorAsset normal
@@ -121,7 +120,7 @@ namespace CardGame.CardBattle.Presentation
 
         private static void CollectRanged(RangedBehaviorAsset behavior, IPresentationModuleCollector collector)
         {
-            collector.Add(new RangedAttackPresentationModule(behavior.presentation.shootDuration));
+            collector.Add(new RangedAttackPresentationModule());
             collector.Add(new DefaultCameraShakePresentationModule());
         }
 

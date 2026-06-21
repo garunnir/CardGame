@@ -1,5 +1,6 @@
 using System.IO;
 using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Presentation;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,9 +10,14 @@ namespace CardGame.CardBattle.Editor
     {
         private const string BehaviorFolder = "Assets/Resources/CardBattle/Behaviors";
         private const string CardFolder = "Assets/Resources/CardBattle/Cards";
+        private const string PresentationFolder = "Assets/Resources/CardBattle/Presentation";
         private const string IllustrationPath = "Assets/Resources/CardBattle/Art/CardIllustration_Default.png";
         private const string VfxFolder = "Assets/Resources/CardBattle/Vfx";
         private const string SharedHitVfxAssetPath = "Assets/Resources/CardBattle/Vfx/SharedHitVfx.prefab";
+        private const string RangedProjectilePresentationPath =
+            "Assets/Resources/CardBattle/Presentation/ProjectilePresentation_Ranged.asset";
+        private const string HealProjectilePresentationPath =
+            "Assets/Resources/CardBattle/Presentation/ProjectilePresentation_Heal.asset";
         private const string DefaultOnHitVfxPath =
             "Assets/JMO Assets/Cartoon FX Remaster/CFXR Prefabs/Impacts/CFXR Hit A (Red).prefab";
         private const string DefaultProjectileVfxPath =
@@ -65,6 +71,7 @@ namespace CardGame.CardBattle.Editor
         public static void AssignDefaultPresentationVfx()
         {
             EnsureFolder(VfxFolder);
+            EnsureFolder(PresentationFolder);
             var sharedHit = EnsureSharedHitVfxPrefab();
             var onHit = LoadPrefab(DefaultOnHitVfxPath);
             var projectile = LoadPrefab(DefaultProjectileVfxPath);
@@ -73,13 +80,12 @@ namespace CardGame.CardBattle.Editor
                 Debug.LogWarning("[CardBattle] 기본 명중 VFX 프리팹을 찾을 수 없습니다: " + DefaultOnHitVfxPath);
             }
 
+            var rangedProjectilePresentation = EnsureRangedProjectilePresentation(projectile, onHit);
+            var healProjectilePresentation = EnsureHealProjectilePresentation(projectile, onHit);
+
             AssignOnHitAndReceivedVfx(LoadBehavior<NormalBehaviorAsset>("Behavior_Normal"), onHit, sharedHit);
             AssignOnHitAndReceivedVfx(LoadBehavior<RangedBehaviorAsset>("Behavior_Ranged"), onHit, sharedHit);
-            if (LoadBehavior<RangedBehaviorAsset>("Behavior_Ranged") is { } ranged && projectile != null)
-            {
-                ranged.presentation.projectileVfxPrefab = projectile;
-                EditorUtility.SetDirty(ranged);
-            }
+            AssignOnHitAndReceivedVfx(LoadBehavior<HealerBehaviorAsset>("Behavior_Healer"), onHit, sharedHit);
 
             var musou = LoadBehavior<MusouBehaviorAsset>("Behavior_Musou");
             AssignOnHitAndReceivedVfx(musou, onHit, sharedHit);
@@ -89,10 +95,84 @@ namespace CardGame.CardBattle.Editor
                 EditorUtility.SetDirty(musou);
             }
 
-            AssignOnHitAndReceivedVfx(LoadBehavior<HealerBehaviorAsset>("Behavior_Healer"), onHit, sharedHit);
+            if (LoadBehavior<RangedBehaviorAsset>("Behavior_Ranged") is { } ranged)
+            {
+                ranged.attackProjectilePresentation = rangedProjectilePresentation;
+                EditorUtility.SetDirty(ranged);
+            }
+
+            if (LoadBehavior<HealerBehaviorAsset>("Behavior_Healer") is { } healer)
+            {
+                healer.turnHealProjectilePresentation = healProjectilePresentation;
+                EditorUtility.SetDirty(healer);
+            }
 
             AssetDatabase.SaveAssets();
-            Debug.Log("[CardBattle] 명중·피격 VFX 기본 할당 완료.");
+            Debug.Log("[CardBattle] 투사체 Presentation SO 및 명중·피격 VFX 기본 할당 완료.");
+        }
+
+        private static ProjectilePresentationAsset EnsureRangedProjectilePresentation(
+            GameObject projectilePrefab,
+            GameObject impactPrefab)
+        {
+            var asset = LoadOrCreateProjectilePresentation(
+                RangedProjectilePresentationPath,
+                "ProjectilePresentation_Ranged");
+            asset.pathKind = ProjectilePathKind.Linear;
+            asset.flightDuration = 0.35f;
+            asset.arcHeight = 0f;
+            if (projectilePrefab != null)
+            {
+                asset.projectileVfxPrefab = projectilePrefab;
+            }
+
+            if (impactPrefab != null)
+            {
+                asset.impactVfxPrefab = impactPrefab;
+            }
+
+            EditorUtility.SetDirty(asset);
+            return asset;
+        }
+
+        private static ProjectilePresentationAsset EnsureHealProjectilePresentation(
+            GameObject projectilePrefab,
+            GameObject impactPrefab)
+        {
+            var asset = LoadOrCreateProjectilePresentation(
+                HealProjectilePresentationPath,
+                "ProjectilePresentation_Heal");
+            asset.pathKind = ProjectilePathKind.Arc;
+            asset.flightDuration = 0.4f;
+            asset.arcHeight = 0.5f;
+            if (projectilePrefab != null)
+            {
+                asset.projectileVfxPrefab = projectilePrefab;
+            }
+
+            if (impactPrefab != null)
+            {
+                asset.impactVfxPrefab = impactPrefab;
+            }
+
+            EditorUtility.SetDirty(asset);
+            return asset;
+        }
+
+        private static ProjectilePresentationAsset LoadOrCreateProjectilePresentation(
+            string assetPath,
+            string assetName)
+        {
+            var asset = AssetDatabase.LoadAssetAtPath<ProjectilePresentationAsset>(assetPath);
+            if (asset != null)
+            {
+                return asset;
+            }
+
+            asset = ScriptableObject.CreateInstance<ProjectilePresentationAsset>();
+            AssetDatabase.CreateAsset(asset, assetPath);
+            asset.name = assetName;
+            return asset;
         }
 
         [MenuItem("CardGame/CardBattle/Assign Default Card Illustrations")]
@@ -297,7 +377,6 @@ namespace CardGame.CardBattle.Editor
                 case RangedBehaviorAsset ranged:
                     if (onHitPrefab != null)
                     {
-                        ranged.presentation.hitVfxPrefab = onHitPrefab;
                         ranged.presentation.deathVfxPrefab = onHitPrefab;
                     }
 

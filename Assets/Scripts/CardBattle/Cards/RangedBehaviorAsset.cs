@@ -1,3 +1,4 @@
+using CardGame.CardBattle.Presentation;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -12,6 +13,10 @@ namespace CardGame.CardBattle.Cards
         public float primaryDamageMultiplier = 1f;
 
         [TabGroup("Tabs", "연출", Icon = SdfIconType.Stars)]
+        [LabelText("공격 투사체 연출")]
+        public ProjectilePresentationAsset attackProjectilePresentation;
+
+        [TabGroup("Tabs", "연출")]
         [HideLabel]
         [InlineProperty]
         public RangedBehaviorPresentation presentation = new RangedBehaviorPresentation();

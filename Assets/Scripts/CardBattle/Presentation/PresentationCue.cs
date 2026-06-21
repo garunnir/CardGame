@@ -8,7 +8,9 @@ namespace CardGame.CardBattle.Presentation
         UiAttackBloom,
         UiHealerBloom,
         PlayAttackPresentation,
-        PlayShootPresentation,
+        FlyProjectile,
+        PlayProjectileImpact,
+        PlayStatFloatingText,
         AttackDash,
         PlayOnHitPresentation,
         PlayReceivedHitPresentation,
@@ -18,7 +20,6 @@ namespace CardGame.CardBattle.Presentation
         WaitBeforeSecondary,
         PlaySecondaryOnHitPresentation,
         CameraShake,
-        PlayHealOnTargetPresentation,
         PlayDeathPresentation,
         PlayHeroStrikePresentation,
         PlayHeroShieldBuffPresentation,
@@ -43,7 +44,11 @@ namespace CardGame.CardBattle.Presentation
             int shieldTo = -1,
             int mpFrom = -1,
             int mpTo = -1,
-            bool isMpGain = false)
+            bool isMpGain = false,
+            ProjectilePresentationAsset projectilePresentation = null,
+            ProjectileRole projectileRole = default,
+            StatFeedbackKind statFeedbackKind = default,
+            int statAmount = 0)
         {
             Kind = kind;
             Duration = duration;
@@ -59,6 +64,10 @@ namespace CardGame.CardBattle.Presentation
             MpFrom = mpFrom;
             MpTo = mpTo;
             IsMpGain = isMpGain;
+            ProjectilePresentation = projectilePresentation;
+            ProjectileRole = projectileRole;
+            StatFeedbackKind = statFeedbackKind;
+            StatAmount = statAmount;
         }
 
         public PresentationCueKind Kind { get; }
@@ -75,5 +84,9 @@ namespace CardGame.CardBattle.Presentation
         public int MpFrom { get; }
         public int MpTo { get; }
         public bool IsMpGain { get; }
+        public ProjectilePresentationAsset ProjectilePresentation { get; }
+        public ProjectileRole ProjectileRole { get; }
+        public StatFeedbackKind StatFeedbackKind { get; }
+        public int StatAmount { get; }
     }
 }

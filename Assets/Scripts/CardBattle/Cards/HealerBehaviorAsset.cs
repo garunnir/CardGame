@@ -1,3 +1,4 @@
+using CardGame.CardBattle.Presentation;
 using Sirenix.OdinInspector;
 using UnityEngine;
 
@@ -25,6 +26,10 @@ namespace CardGame.CardBattle.Cards
         public bool excludesSelf = true;
 
         [TabGroup("Tabs", "연출", Icon = SdfIconType.Stars)]
+        [LabelText("턴 힐 투사체 연출")]
+        public ProjectilePresentationAsset turnHealProjectilePresentation;
+
+        [TabGroup("Tabs", "연출")]
         [HideLabel]
         [InlineProperty]
         public HealerBehaviorPresentation presentation = new HealerBehaviorPresentation();

@@ -26,8 +26,8 @@ MonoBehaviour:
     counterSfx: {fileID: 0}
     deathSfx: {fileID: 8300000, guid: 7bef0064f8567430cac22499c6b93d4f, type: 3}
     attackVfxPrefab: {fileID: 904662820145583817, guid: 019faff12646bd8438ea56e8e7861fd8, type: 3}
-    hitVfxPrefab: {fileID: 5880797563127281583, guid: 265d3a5ba69981a4698ceabcedf368b0, type: 3}
-    receivedHitVfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
-    deathVfxPrefab: {fileID: 5985634496115995773, guid: 463cf9f7af4680240898f6aeba3fe3e6, type: 3}
+    hitVfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
+    receivedHitVfxPrefab: {fileID: 4021103657954561961, guid: 5599af40cfd6e44469a1c7820aaf360d, type: 3}
+    deathVfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
     attackDashDuration: 0
     hitShakeStrength: 0

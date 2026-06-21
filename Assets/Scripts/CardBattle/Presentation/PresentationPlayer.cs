@@ -49,10 +49,124 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
+            PrepareTurnStartHpDisplays(sequence, viewRegistry, heroPresenter);
+
             for (var i = 0; i < sequence.Cues.Count; i++)
             {
+                if (TryCollectParallelHealFlights(sequence.Cues, i, out var batchEnd))
+                {
+                    await ExecuteParallelHealFlightsAsync(
+                        sequence.Cues,
+                        i,
+                        batchEnd,
+                        presentation,
+                        viewRegistry,
+                        heroPresenter);
+                    i = batchEnd;
+                    continue;
+                }
+
                 await ExecuteTurnCueAsync(sequence.Cues[i], ui, presentation, viewRegistry, heroPresenter);
             }
+        }
+
+        private static void PrepareTurnStartHpDisplays(
+            PresentationSequence sequence,
+            ICardViewRegistry viewRegistry,
+            HeroArenaPresenter heroPresenter)
+        {
+            if (sequence?.Cues == null)
+            {
+                return;
+            }
+
+            var preparedCards = new HashSet<int>();
+            var preparedHeroes = new HashSet<int>();
+
+            for (var i = 0; i < sequence.Cues.Count; i++)
+            {
+                var cue = sequence.Cues[i];
+
+                if (cue.Kind == PresentationCueKind.HpBarTween
+                    && cue.SubjectId.IsValid
+                    && cue.HpFrom >= 0
+                    && preparedCards.Add(cue.SubjectId.Value)
+                    && viewRegistry != null
+                    && viewRegistry.TryGetView(cue.SubjectId, out var cardView))
+                {
+                    cardView.SetHpDisplay(cue.HpFrom);
+                }
+
+                if (cue.Kind == PresentationCueKind.HeroStatTween
+                    && cue.SubjectHeroId.IsValid
+                    && cue.HpFrom >= 0
+                    && preparedHeroes.Add(cue.SubjectHeroId.Value))
+                {
+                    heroPresenter?.SetHeroHpDisplay(cue.SubjectHeroId, cue.HpFrom);
+                }
+            }
+        }
+
+        private static bool TryCollectParallelHealFlights(
+            IReadOnlyList<PresentationCue> cues,
+            int startIndex,
+            out int batchEndExclusive)
+        {
+            batchEndExclusive = startIndex;
+            if (startIndex >= cues.Count)
+            {
+                return false;
+            }
+
+            var first = cues[startIndex];
+            if (first.Kind != PresentationCueKind.FlyProjectile
+                || first.ProjectileRole != ProjectileRole.TurnHeal)
+            {
+                return false;
+            }
+
+            var index = startIndex + 1;
+            while (index < cues.Count)
+            {
+                var cue = cues[index];
+                if (cue.Kind != PresentationCueKind.FlyProjectile
+                    || cue.ProjectileRole != ProjectileRole.TurnHeal)
+                {
+                    break;
+                }
+
+                index++;
+            }
+
+            batchEndExclusive = index - 1;
+            return index > startIndex + 1;
+        }
+
+        private static async UniTask ExecuteParallelHealFlightsAsync(
+            IReadOnlyList<PresentationCue> cues,
+            int startIndex,
+            int endIndexInclusive,
+            CardPresentationService presentation,
+            ICardViewRegistry viewRegistry,
+            HeroArenaPresenter heroPresenter)
+        {
+            if (presentation == null)
+            {
+                return;
+            }
+
+            var tasks = new List<UniTask>(endIndexInclusive - startIndex + 1);
+            for (var i = startIndex; i <= endIndexInclusive; i++)
+            {
+                tasks.Add(ExecuteFlyProjectileCueAsync(
+                    cues[i],
+                    presentation,
+                    viewRegistry,
+                    heroPresenter,
+                    null));
+            }
+
+            await UniTask.WhenAll(tasks);
         }
 
         private void CacheHeroLookup(BattlePresentationSpec spec)
@@ -104,7 +218,7 @@ namespace CardGame.CardBattle.Presentation
                     && cue.HpFrom >= 0
                     && preparedHeroes.Add(cue.SubjectHeroId.Value))
                 {
-                    spec.HeroPresenter?.SetHeroHpDisplay(ResolveHeroForSpec(spec, cue.SubjectHeroId), cue.HpFrom);
+                    spec.HeroPresenter?.SetHeroHpDisplay(cue.SubjectHeroId, cue.HpFrom);
                 }
             }
         }
@@ -142,25 +256,27 @@ namespace CardGame.CardBattle.Presentation
                     ui?.PulseHealerBloom();
                     break;
 
-                case PresentationCueKind.PlayHealOnTargetPresentation:
-                    if (viewRegistry != null
-                        && cue.SourceId.IsValid
-                        && viewRegistry.TryGetModel(cue.SourceId, out var healer)
-                        && viewRegistry.TryGetView(cue.SubjectId, out var healTargetView))
-                    {
-                        presentation?.PlayTurnHealOnTarget(healer, healTargetView);
-                    }
+                case PresentationCueKind.FlyProjectile:
+                    await ExecuteFlyProjectileCueAsync(
+                        cue,
+                        presentation,
+                        viewRegistry,
+                        heroPresenter,
+                        null);
+                    break;
 
+                case PresentationCueKind.PlayProjectileImpact:
+                    ExecuteProjectileImpactCue(cue, presentation, viewRegistry, heroPresenter);
+                    break;
+
+                case PresentationCueKind.PlayStatFloatingText:
+                    await ExecuteStatFloatingTextCueAsync(cue, presentation, viewRegistry, heroPresenter);
                     break;
 
                 case PresentationCueKind.PlayHeroSupportFromSlot:
-                    if (viewRegistry != null
-                        && cue.SubjectId.IsValid
-                        && viewRegistry.TryGetModel(cue.SubjectId, out var sourceCard)
-                        && heroPresenter != null)
+                    if (cue.IsMpGain)
                     {
-                        var hero = heroPresenter.FindHero(cue.SubjectHeroId);
-                        presentation?.PlayHeroSupportFromSlot(sourceCard, heroPresenter, hero, cue.IsMpGain);
+                        presentation?.PlayMpGainStub();
                     }
 
                     break;
@@ -177,9 +293,8 @@ namespace CardGame.CardBattle.Presentation
                 case PresentationCueKind.HeroStatTween:
                     if (heroPresenter != null)
                     {
-                        var hero = heroPresenter.FindHero(cue.SubjectHeroId);
                         await heroPresenter.PlayStatTweenAsync(
-                            hero,
+                            cue.SubjectHeroId,
                             cue.HpFrom,
                             cue.HpTo,
                             cue.ShieldFrom,
@@ -215,10 +330,21 @@ namespace CardGame.CardBattle.Presentation
                         spec.GetCardView(spec.AttackerCard.InstanceId));
                     break;
 
-                case PresentationCueKind.PlayShootPresentation:
-                    spec.Presentation?.PlayAttack(
-                        spec.AttackerCard,
-                        spec.GetCardView(spec.AttackerCard.InstanceId));
+                case PresentationCueKind.FlyProjectile:
+                    await ExecuteFlyProjectileCueAsync(
+                        cue,
+                        spec.Presentation,
+                        spec.CardViewRegistry,
+                        spec.HeroPresenter,
+                        spec);
+                    break;
+
+                case PresentationCueKind.PlayProjectileImpact:
+                    ExecuteProjectileImpactCue(
+                        cue,
+                        spec.Presentation,
+                        spec.CardViewRegistry,
+                        spec.HeroPresenter);
                     break;
 
                 case PresentationCueKind.AttackDash:
@@ -253,7 +379,7 @@ namespace CardGame.CardBattle.Presentation
 
                 case PresentationCueKind.PlayHeroReceivedHitPresentation:
                     var hitHero = ResolveHero(cue.SubjectHeroId);
-                    spec.Presentation?.PlayHeroReceivedHit(hitHero, spec.GetHeroTargetView(hitHero));
+                    spec.Presentation?.PlayHeroReceivedHit(hitHero, spec.GetHeroTargetView(cue.SubjectHeroId));
                     break;
 
                 case PresentationCueKind.HitShake:
@@ -267,9 +393,8 @@ namespace CardGame.CardBattle.Presentation
                 case PresentationCueKind.HeroStatTween:
                     if (spec.HeroPresenter != null)
                     {
-                        var hero = ResolveHero(cue.SubjectHeroId);
                         await spec.HeroPresenter.PlayStatTweenAsync(
-                            hero,
+                            cue.SubjectHeroId,
                             cue.HpFrom,
                             cue.HpTo,
                             cue.ShieldFrom,
@@ -329,12 +454,108 @@ namespace CardGame.CardBattle.Presentation
             }
         }
 
+        private static async UniTask ExecuteFlyProjectileCueAsync(
+            PresentationCue cue,
+            CardPresentationService presentation,
+            ICardViewRegistry viewRegistry,
+            HeroArenaPresenter heroPresenter,
+            BattlePresentationSpec spec)
+        {
+            if (presentation == null || cue.ProjectilePresentation == null || !cue.SourceId.IsValid)
+            {
+                return;
+            }
+
+            var fromView = ResolveCardTargetView(viewRegistry, spec, cue.SourceId);
+            var toView = ResolveCueTargetView(cue, viewRegistry, heroPresenter, spec);
+            if (fromView == null || toView == null)
+            {
+                return;
+            }
+
+            await presentation.FlyProjectileAsync(cue.ProjectilePresentation, fromView, toView);
+        }
+
+        private static void ExecuteProjectileImpactCue(
+            PresentationCue cue,
+            CardPresentationService presentation,
+            ICardViewRegistry viewRegistry,
+            HeroArenaPresenter heroPresenter,
+            BattlePresentationSpec spec = null)
+        {
+            if (presentation == null)
+            {
+                return;
+            }
+
+            var targetView = ResolveCueTargetView(cue, viewRegistry, heroPresenter, spec);
+            presentation.PlayProjectileImpact(cue.ProjectilePresentation, targetView);
+        }
+
+        private static async UniTask ExecuteStatFloatingTextCueAsync(
+            PresentationCue cue,
+            CardPresentationService presentation,
+            ICardViewRegistry viewRegistry,
+            HeroArenaPresenter heroPresenter)
+        {
+            if (presentation == null || cue.StatAmount <= 0)
+            {
+                return;
+            }
+
+            var targetView = ResolveCueTargetView(cue, viewRegistry, heroPresenter, null);
+            if (targetView == null)
+            {
+                return;
+            }
+
+            await presentation.ShowStatFloatingTextAsync(targetView, cue.StatFeedbackKind, cue.StatAmount);
+        }
+
+        private static IPresentationTargetView ResolveCueTargetView(
+            PresentationCue cue,
+            ICardViewRegistry viewRegistry,
+            HeroArenaPresenter heroPresenter,
+            BattlePresentationSpec spec)
+        {
+            if (cue.SubjectHeroId.IsValid)
+            {
+                return heroPresenter != null
+                    ? heroPresenter.GetPresentationView(cue.SubjectHeroId)
+                    : spec?.GetHeroTargetView(cue.SubjectHeroId);
+            }
+
+            if (cue.SubjectId.IsValid)
+            {
+                return ResolveCardTargetView(viewRegistry, spec, cue.SubjectId);
+            }
+
+            return null;
+        }
+
+        private static IPresentationTargetView ResolveCardTargetView(
+            ICardViewRegistry viewRegistry,
+            BattlePresentationSpec spec,
+            CardInstanceId id)
+        {
+            if (spec != null)
+            {
+                return spec.GetCardTargetView(id);
+            }
+
+            if (viewRegistry != null && viewRegistry.TryGetView(id, out var view))
+            {
+                return new CardPresentationTargetAdapter(view);
+            }
+
+            return null;
+        }
+
         private static IPresentationTargetView ResolveShakeView(BattlePresentationSpec spec, PresentationCue cue)
         {
             if (cue.SubjectHeroId.IsValid)
             {
-                var hero = spec.HeroPresenter?.FindHero(cue.SubjectHeroId);
-                return spec.GetHeroTargetView(hero);
+                return spec.GetHeroTargetView(cue.SubjectHeroId);
             }
 
             if (cue.SubjectId.IsValid)

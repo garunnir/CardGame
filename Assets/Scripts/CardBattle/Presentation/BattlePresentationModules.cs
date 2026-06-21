@@ -108,25 +108,29 @@ namespace CardGame.CardBattle.Presentation
 
     public sealed class RangedAttackPresentationModule : IPresentationModule
     {
-        private readonly float shootDuration;
-
-        public RangedAttackPresentationModule(float shootDuration)
-        {
-            this.shootDuration = shootDuration;
-        }
-
         public void CollectCues(BattlePresentationSpec spec, IList<PresentationCue> cues)
         {
-            if (spec?.PrimaryTargetCard == null)
+            if (spec?.PrimaryTargetCard == null || spec.AttackerCard == null)
             {
                 return;
             }
 
+            var attackerId = spec.AttackerCard.InstanceId;
             var targetId = spec.PrimaryTargetCard.InstanceId;
-            cues.Add(new PresentationCue(PresentationCueKind.PlayShootPresentation));
+            var projectile = PresentationAssetResolve.ResolveAttack(spec.CardBehavior);
+
             cues.Add(new PresentationCue(PresentationCueKind.UiAttackBloom));
-            cues.Add(new PresentationCue(PresentationCueKind.Wait, shootDuration > 0f ? shootDuration : 0.35f));
-            cues.Add(new PresentationCue(PresentationCueKind.PlayOnHitPresentation));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.FlyProjectile,
+                sourceId: attackerId,
+                subjectId: targetId,
+                projectilePresentation: projectile,
+                projectileRole: ProjectileRole.Attack));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayProjectileImpact,
+                subjectId: targetId,
+                sourceId: attackerId,
+                projectilePresentation: projectile));
             cues.Add(new PresentationCue(
                 PresentationCueKind.PlayReceivedHitPresentation,
                 subjectId: targetId));
@@ -138,6 +142,44 @@ namespace CardGame.CardBattle.Presentation
                 subjectId: targetId,
                 hpFrom: spec.Snapshot.GetBeforeCardHp(targetId),
                 hpTo: spec.Snapshot.GetAfterCardHp(targetId)));
+        }
+    }
+
+    public sealed class RangedCardVsHeroPresentationModule : IPresentationModule
+    {
+        private const float DefaultHitShake = 0.12f;
+
+        public void CollectCues(BattlePresentationSpec spec, IList<PresentationCue> cues)
+        {
+            if (spec?.PrimaryTargetHero == null || spec.AttackerCard == null)
+            {
+                return;
+            }
+
+            var attackerId = spec.AttackerCard.InstanceId;
+            var heroId = spec.PrimaryTargetHero.InstanceId;
+            var projectile = PresentationAssetResolve.ResolveAttack(spec.CardBehavior);
+
+            cues.Add(new PresentationCue(PresentationCueKind.UiAttackBloom));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.FlyProjectile,
+                sourceId: attackerId,
+                subjectHeroId: heroId,
+                projectilePresentation: projectile,
+                projectileRole: ProjectileRole.Attack));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayProjectileImpact,
+                subjectHeroId: heroId,
+                sourceId: attackerId,
+                projectilePresentation: projectile));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.PlayHeroReceivedHitPresentation,
+                subjectHeroId: heroId));
+            cues.Add(new PresentationCue(
+                PresentationCueKind.HitShake,
+                floatParam: DefaultHitShake,
+                subjectHeroId: heroId));
+            CardVsHeroMeleePresentationModule.AppendHeroStatCues(spec, heroId, cues);
         }
     }
 

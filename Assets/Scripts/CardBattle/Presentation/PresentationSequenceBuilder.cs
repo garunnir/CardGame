@@ -51,65 +51,8 @@ namespace CardGame.CardBattle.Presentation
                 return new PresentationSequence(cues);
             }
 
-            cues.Add(new PresentationCue(PresentationCueKind.UiHealerBloom));
-
-            for (var i = 0; i < events.Count; i++)
-            {
-                var effectEvent = events[i];
-                if (effectEvent.TargetCard != null)
-                {
-                    if (effectEvent.Source == null)
-                    {
-                        continue;
-                    }
-
-                    var target = effectEvent.TargetCard;
-                    cues.Add(new PresentationCue(
-                        PresentationCueKind.PlayHealOnTargetPresentation,
-                        subjectId: target.InstanceId,
-                        sourceId: effectEvent.Source.InstanceId));
-
-                    if (effectEvent.Kind == TurnStartStatKind.Heal)
-                    {
-                        cues.Add(new PresentationCue(
-                            PresentationCueKind.HpBarTween,
-                            subjectId: target.InstanceId,
-                            hpFrom: effectEvent.FromValue,
-                            hpTo: effectEvent.ToValue));
-                    }
-                }
-                else if (effectEvent.TargetHero != null)
-                {
-                    var hero = effectEvent.TargetHero;
-                    if (effectEvent.Source != null)
-                    {
-                        cues.Add(new PresentationCue(
-                            PresentationCueKind.PlayHeroSupportFromSlot,
-                            subjectId: effectEvent.Source.InstanceId,
-                            subjectHeroId: hero.InstanceId,
-                            isMpGain: effectEvent.Kind == TurnStartStatKind.MpGain));
-                    }
-
-                    if (effectEvent.Kind == TurnStartStatKind.Heal)
-                    {
-                        cues.Add(new PresentationCue(
-                            PresentationCueKind.HeroStatTween,
-                            subjectHeroId: hero.InstanceId,
-                            hpFrom: effectEvent.FromValue,
-                            hpTo: effectEvent.ToValue));
-                    }
-                    else
-                    {
-                        cues.Add(new PresentationCue(
-                            PresentationCueKind.HeroStatTween,
-                            subjectHeroId: hero.InstanceId,
-                            mpFrom: effectEvent.FromValue,
-                            mpTo: effectEvent.ToValue,
-                            isMpGain: true));
-                    }
-                }
-            }
-
+            var planInputs = TurnStartPresentationPlanInput.FromEvents(events);
+            TurnStartPresentationPlanner.AppendCues(planInputs, cues);
             return new PresentationSequence(cues);
         }
 

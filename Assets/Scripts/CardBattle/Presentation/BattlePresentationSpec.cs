@@ -240,9 +240,14 @@ namespace CardGame.CardBattle.Presentation
             return view != null ? new CardPresentationTargetAdapter(view) : null;
         }
 
+        public IPresentationTargetView GetHeroTargetView(HeroInstanceId id)
+        {
+            return HeroPresenter != null ? HeroPresenter.GetPresentationView(id) : null;
+        }
+
         public IPresentationTargetView GetHeroTargetView(HeroModel hero)
         {
-            return HeroPresenter != null ? HeroPresenter.GetPresentationView(hero) : null;
+            return hero != null ? GetHeroTargetView(hero.InstanceId) : null;
         }
     }
 }

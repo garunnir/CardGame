@@ -204,6 +204,14 @@ namespace CardGame.CardBattle.Cards
             SetStatsVisual(hp, displayShield, displayMp);
         }
 
+        internal int DisplayMaxHpValue => displayMaxHp;
+
+        internal int DisplayMaxMpValue => displayMaxMp;
+
+        internal int DisplayShieldValue => displayShield;
+
+        internal int DisplayHpValue => displayHp;
+
         public void SetTargetHighlight(bool enabled)
         {
             targetEnabled = enabled;

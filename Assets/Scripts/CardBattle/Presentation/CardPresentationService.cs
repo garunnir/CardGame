@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CardGame.CardBattle.Bridge;
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace CardGame.CardBattle.Presentation
@@ -19,6 +20,80 @@ namespace CardGame.CardBattle.Presentation
             audio = audioAdapter;
         }
 
+        public UniTask FlyProjectileAsync(
+            ProjectilePresentationAsset presentation,
+            IPresentationTargetView fromView,
+            IPresentationTargetView toView)
+        {
+            if (presentation == null || fromView?.ViewTransform == null || toView?.ViewTransform == null)
+            {
+                return UniTask.CompletedTask;
+            }
+
+            audio?.PlaySfx(presentation.launchSfx);
+            return PresentationProjectileFlight.FlyAsync(
+                fromView.ViewTransform,
+                toView.ViewTransform,
+                presentation.projectileVfxPrefab,
+                presentation.flightDuration,
+                presentation.pathKind,
+                presentation.arcHeight);
+        }
+
+        public void PlayProjectileImpact(
+            ProjectilePresentationAsset presentation,
+            IPresentationTargetView targetView)
+        {
+            if (presentation == null)
+            {
+                return;
+            }
+
+            PlayClipOnTarget(presentation.impactSfx, presentation.impactVfxPrefab, targetView);
+        }
+
+        public UniTask ShowStatFloatingTextAsync(
+            IPresentationTargetView targetView,
+            StatFeedbackKind kind,
+            int amount)
+        {
+            return BattleStatFloatingTextPresenter.ShowAsync(targetView, kind, amount);
+        }
+
+        public void PlayTurnStartEffectsImmediate(
+            IReadOnlyList<TurnStartPresentationPlanInput> inputs,
+            Func<CardInstanceId, ICardBattleView> findCardView,
+            HeroArenaPresenter heroPresenter)
+        {
+            if (inputs == null || inputs.Count == 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < inputs.Count; i++)
+            {
+                var input = inputs[i];
+                if (input.Kind != TurnStartStatKind.Heal)
+                {
+                    if (input.Kind == TurnStartStatKind.MpGain)
+                    {
+                        PlayMpGainStub();
+                    }
+
+                    continue;
+                }
+
+                var targetView = ResolvePlanTargetView(input, findCardView, heroPresenter);
+                if (targetView == null)
+                {
+                    continue;
+                }
+
+                PlayProjectileImpact(input.ProjectilePresentation, targetView);
+                ShowStatFloatingTextAsync(targetView, StatFeedbackKind.Heal, input.Delta).Forget();
+            }
+        }
+
         public void PlayAttack(CardModel attacker, ICardBattleView attackerView)
         {
             if (attacker == null)
@@ -31,8 +106,7 @@ namespace CardGame.CardBattle.Presentation
                 case NormalBehaviorAsset normal:
                     PlayAttackClip(normal.presentation.attackSfx, normal.presentation.attackVfxPrefab, attackerView);
                     break;
-                case RangedBehaviorAsset ranged:
-                    PlayAttackClip(ranged.presentation.shootSfx, ranged.presentation.projectileVfxPrefab, attackerView);
+                case RangedBehaviorAsset:
                     break;
                 case MusouBehaviorAsset musou:
                     PlayAttackClip(musou.presentation.attackSfx, musou.presentation.attackVfxPrefab, attackerView);
@@ -93,40 +167,6 @@ namespace CardGame.CardBattle.Presentation
             }
 
             return 0f;
-        }
-
-        public void PlayTurnHealOnTarget(CardModel healer, ICardBattleView targetView)
-        {
-            if (healer?.Behavior is HealerBehaviorAsset healerBehavior)
-            {
-                audio?.PlaySfx(healerBehavior.presentation.turnHealSfx);
-                SpawnVfx(healerBehavior.presentation.turnHealVfxPrefab, targetView);
-            }
-        }
-
-        public void PlayHealFromEvents(
-            IReadOnlyList<TurnStartHealEvent> healEvents,
-            Func<CardInstanceId, ICardBattleView> findView)
-        {
-            if (healEvents == null || healEvents.Count == 0)
-            {
-                return;
-            }
-
-            for (var i = 0; i < healEvents.Count; i++)
-            {
-                var healEvent = healEvents[i];
-                var healer = healEvent.Healer;
-                var target = healEvent.Target;
-                if (healer == null || target == null)
-                {
-                    continue;
-                }
-
-                PlayTurnHealOnTarget(
-                    healer,
-                    findView != null ? findView(target.InstanceId) : null);
-            }
         }
 
         public void PlayDeath(CardModel card, ICardBattleView view)
@@ -198,28 +238,28 @@ namespace CardGame.CardBattle.Presentation
             SpawnVfxOnTarget(presentation.shieldBuffVfxPrefab, strikerView);
         }
 
-        public void PlayHeroSupportFromSlot(
-            CardModel sourceCard,
-            HeroArenaPresenter heroPresenter,
-            HeroModel hero,
-            bool isMpGain)
+        public void PlayMpGainStub()
         {
-            if (sourceCard == null || hero == null || heroPresenter == null)
+            audio?.PlaySfx(null);
+        }
+
+        private static IPresentationTargetView ResolvePlanTargetView(
+            TurnStartPresentationPlanInput input,
+            Func<CardInstanceId, ICardBattleView> findCardView,
+            HeroArenaPresenter heroPresenter)
+        {
+            if (input.TargetCardId.IsValid && findCardView != null)
             {
-                return;
+                var cardView = findCardView(input.TargetCardId);
+                return cardView != null ? new CardPresentationTargetAdapter(cardView) : null;
             }
 
-            if (sourceCard.Behavior is HealerBehaviorAsset healer && !isMpGain)
+            if (input.TargetHeroId.IsValid && heroPresenter != null)
             {
-                audio?.PlaySfx(healer.presentation.turnHealSfx);
-                SpawnVfxOnTarget(
-                    healer.presentation.turnHealVfxPrefab,
-                    heroPresenter.GetPresentationView(hero));
+                return heroPresenter.GetPresentationView(input.TargetHeroId);
             }
-            else
-            {
-                audio?.PlaySfx(null);
-            }
+
+            return null;
         }
 
         private void PlayClipOnTarget(AudioClip clip, GameObject vfxPrefab, IPresentationTargetView view)
@@ -282,9 +322,7 @@ namespace CardGame.CardBattle.Presentation
                     sfx = normal.presentation.hitSfx;
                     vfx = CardPresentationDefaults.ResolveOnHitVfx(normal.presentation.hitVfxPrefab);
                     break;
-                case RangedBehaviorAsset ranged:
-                    sfx = ranged.presentation.hitSfx;
-                    vfx = CardPresentationDefaults.ResolveOnHitVfx(ranged.presentation.hitVfxPrefab);
+                case RangedBehaviorAsset:
                     break;
                 case MusouBehaviorAsset musou:
                     sfx = musou.presentation.hitSfx;

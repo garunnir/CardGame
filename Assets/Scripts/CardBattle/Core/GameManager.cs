@@ -327,11 +327,14 @@ namespace CardGame.CardBattle.Core
         private async UniTask PlayTurnStartPresentationAsync(IReadOnlyList<TurnStartEffectEvent> events)
         {
             ICardViewRegistry viewRegistry = cardBoardPresenter;
+            var planInputs = TurnStartPresentationPlanInput.FromEvents(events);
+
             if (presentationPlayer == null)
             {
-                presentationService?.PlayHealFromEvents(
-                    ExtractCardHealEvents(events),
-                    FindView);
+                presentationService?.PlayTurnStartEffectsImmediate(
+                    planInputs,
+                    FindView,
+                    heroArenaPresenter);
                 SyncTurnStartTargets(events);
                 return;
             }
@@ -344,30 +347,6 @@ namespace CardGame.CardBattle.Core
                 viewRegistry,
                 heroArenaPresenter);
             SyncTurnStartTargets(events);
-        }
-
-        private static List<TurnStartHealEvent> ExtractCardHealEvents(IReadOnlyList<TurnStartEffectEvent> events)
-        {
-            var healEvents = new List<TurnStartHealEvent>();
-            for (var i = 0; i < events.Count; i++)
-            {
-                var effectEvent = events[i];
-                if (effectEvent.Kind != TurnStartStatKind.Heal
-                    || effectEvent.TargetCard == null
-                    || effectEvent.Source == null)
-                {
-                    continue;
-                }
-
-                healEvents.Add(new TurnStartHealEvent(
-                    effectEvent.Source,
-                    effectEvent.TargetCard,
-                    effectEvent.ToValue - effectEvent.FromValue,
-                    effectEvent.FromValue,
-                    effectEvent.ToValue));
-            }
-
-            return healEvents;
         }
 
         private void SyncTurnStartTargets(IReadOnlyList<TurnStartEffectEvent> events)

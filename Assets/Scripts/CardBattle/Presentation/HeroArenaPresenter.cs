@@ -102,21 +102,71 @@ namespace CardGame.CardBattle.Presentation
             return null;
         }
 
+        public IPresentationTargetView GetPresentationView(HeroInstanceId id)
+        {
+            var entity = ResolveEntity(id);
+            return entity != null ? new HeroPresentationTargetAdapter(entity) : null;
+        }
+
         public IPresentationTargetView GetPresentationView(HeroModel hero)
         {
-            var entity = ResolveEntity(hero);
-            return entity != null ? new HeroPresentationTargetAdapter(entity) : null;
+            return hero != null ? GetPresentationView(hero.InstanceId) : null;
+        }
+
+        public void SetHeroHpDisplay(HeroInstanceId id, int hp)
+        {
+            ResolveEntity(id)?.SetHpDisplay(hp);
         }
 
         public void SetHeroHpDisplay(HeroModel hero, int hp)
         {
-            var entity = ResolveEntity(hero);
-            if (hero == null || entity == null)
+            if (hero != null)
+            {
+                SetHeroHpDisplay(hero.InstanceId, hp);
+            }
+        }
+
+        public async UniTask PlayStatTweenAsync(
+            HeroInstanceId id,
+            int hpFrom,
+            int hpTo,
+            int shieldFrom,
+            int shieldTo,
+            int mpFrom,
+            int mpTo)
+        {
+            var entity = ResolveEntity(id);
+            if (entity == null)
             {
                 return;
             }
 
-            entity.SetHpDisplay(hp);
+            if (hpFrom >= 0 && hpTo >= 0 && hpFrom != hpTo)
+            {
+                var shield = shieldFrom >= 0 ? shieldFrom : entity.DisplayShieldValue;
+                await entity.TweenHpShieldAsync(
+                    hpFrom,
+                    hpTo,
+                    shield,
+                    shield,
+                    entity.DisplayMaxHpValue);
+            }
+
+            if (shieldFrom >= 0 && shieldTo >= 0 && shieldFrom != shieldTo)
+            {
+                var hp = hpTo >= 0 ? hpTo : entity.DisplayHpValue;
+                await entity.TweenHpShieldAsync(
+                    hp,
+                    hp,
+                    shieldFrom,
+                    shieldTo,
+                    entity.DisplayMaxHpValue);
+            }
+
+            if (mpFrom >= 0 && mpTo >= 0 && mpFrom != mpTo)
+            {
+                await entity.TweenMpAsync(mpFrom, mpTo, entity.DisplayMaxMpValue);
+            }
         }
 
         public async UniTask PlayStatTweenAsync(
@@ -128,43 +178,42 @@ namespace CardGame.CardBattle.Presentation
             int mpFrom,
             int mpTo)
         {
-            if (hero == null)
+            if (hero != null)
             {
-                return;
-            }
-
-            var entity = ResolveEntity(hero);
-            if (entity == null)
-            {
-                return;
-            }
-
-            if (hpFrom >= 0 && hpTo >= 0 && hpFrom != hpTo)
-            {
-                var shield = shieldFrom >= 0 ? shieldFrom : hero.CurrentShield;
-                await entity.TweenHpShieldAsync(hpFrom, hpTo, shield, shield, hero.MaxHp);
-            }
-
-            if (shieldFrom >= 0 && shieldTo >= 0 && shieldFrom != shieldTo)
-            {
-                var hp = hpTo >= 0 ? hpTo : hero.CurrentHp;
-                await entity.TweenHpShieldAsync(hp, hp, shieldFrom, shieldTo, hero.MaxHp);
-            }
-
-            if (mpFrom >= 0 && mpTo >= 0 && mpFrom != mpTo)
-            {
-                await entity.TweenMpAsync(mpFrom, mpTo, hero.MaxMp);
+                await PlayStatTweenAsync(
+                    hero.InstanceId,
+                    hpFrom,
+                    hpTo,
+                    shieldFrom,
+                    shieldTo,
+                    mpFrom,
+                    mpTo);
             }
         }
 
-        private HeroEntity ResolveEntity(HeroModel hero)
+        private HeroEntity ResolveEntity(HeroInstanceId id)
         {
-            if (hero == null)
+            if (!id.IsValid)
             {
                 return null;
             }
 
-            return hero.IsPlayerTeam ? playerHeroEntity : enemyHeroEntity;
+            if (playerHeroEntity != null && playerHeroEntity.InstanceId == id)
+            {
+                return playerHeroEntity;
+            }
+
+            if (enemyHeroEntity != null && enemyHeroEntity.InstanceId == id)
+            {
+                return enemyHeroEntity;
+            }
+
+            return null;
+        }
+
+        private HeroEntity ResolveEntity(HeroModel hero)
+        {
+            return hero != null ? ResolveEntity(hero.InstanceId) : null;
         }
 
         private void EnsureHeroEntities()
