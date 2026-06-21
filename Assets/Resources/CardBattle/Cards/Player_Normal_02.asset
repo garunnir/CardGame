@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Player_Normal_02
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
   cardId: Player_Normal_02
-  displayName: Player Normal 02
+  displayName: "\uADFC\uC8112"
   maxHp: 5
   illustration: {fileID: 21300000, guid: 69b30b2a45d5db34eb107ba7adcfd329, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345601, type: 2}
@@ -23,5 +23,5 @@ MonoBehaviour:
     strikeBonus: 1
     turnStartHeroHeal: 0
     mpGainOnTurnStart: 0
-    mpGainOnHeroStrike: 5
+    mpGainOnHeroStrike: 8
     defenseBonus: 1

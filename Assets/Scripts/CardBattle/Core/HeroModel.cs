@@ -43,6 +43,7 @@ namespace CardGame.CardBattle.Core
             DisplayName = source.displayName;
             MaxHp = source.maxHp;
             MaxMp = source.maxMp;
+            MpGainPerTurn = source.mpGainPerTurn;
             BaseAttack = source.baseAttack;
             IsPlayerTeam = isPlayerTeam;
             CurrentHp = source.maxHp;
@@ -56,6 +57,7 @@ namespace CardGame.CardBattle.Core
         public string DisplayName { get; }
         public int MaxHp { get; }
         public int MaxMp { get; }
+        public int MpGainPerTurn { get; }
         public int BaseAttack { get; }
         public bool IsPlayerTeam { get; }
         public int CurrentHp { get; private set; }

@@ -114,8 +114,25 @@ namespace CardGame.CardBattle.Presentation
             for (var i = 0; i < heroEvents.Count; i++)
             {
                 var heroEvent = heroEvents[i];
-                if (heroEvent.SourceCard == null || heroEvent.Hero == null)
+                if (heroEvent.Hero == null)
                 {
+                    continue;
+                }
+
+                if (heroEvent.SourceCard == null)
+                {
+                    if (!heroEvent.IsMpGain)
+                    {
+                        continue;
+                    }
+
+                    events.Add(new TurnStartEffectEvent(
+                        null,
+                        null,
+                        heroEvent.Hero,
+                        TurnStartStatKind.MpGain,
+                        heroEvent.FromMp,
+                        heroEvent.ToMp));
                     continue;
                 }
 

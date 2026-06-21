@@ -25,6 +25,21 @@ namespace CardGame.CardBattle.Core
             }
 
             var contributions = SlotSupportAggregator.PlanContributions(battlefield);
+            if (hero.MpGainPerTurn > 0)
+            {
+                var fromMp = hero.CurrentMp;
+                hero.AddMp(hero.MpGainPerTurn);
+                events.Add(new HeroSupportHealEvent(
+                    null,
+                    hero,
+                    hero.MpGainPerTurn,
+                    hero.CurrentHp,
+                    hero.CurrentHp,
+                    fromMp,
+                    hero.CurrentMp,
+                    isMpGain: true));
+            }
+
             for (var i = 0; i < contributions.Count; i++)
             {
                 var contribution = contributions[i];

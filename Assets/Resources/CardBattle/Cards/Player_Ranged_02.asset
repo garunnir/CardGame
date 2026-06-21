@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Player_Ranged_02
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
   cardId: Player_Ranged_02
-  displayName: Player Ranged 02
+  displayName: "\uC6D0\uAC70\uB9AC2"
   maxHp: 5
   illustration: {fileID: 21300000, guid: 5d81e5f901c965b4db3aeead919aa5dc, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345602, type: 2}
@@ -22,6 +22,6 @@ MonoBehaviour:
   heroSupport:
     strikeBonus: 0
     turnStartHeroHeal: 0
-    mpGainOnTurnStart: 15
-    mpGainOnHeroStrike: 5
+    mpGainOnTurnStart: 22
+    mpGainOnHeroStrike: 8
     defenseBonus: 0

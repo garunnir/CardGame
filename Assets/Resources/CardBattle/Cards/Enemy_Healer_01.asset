@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Enemy_Healer_01
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
   cardId: Enemy_Healer_01
-  displayName: Enemy Healer 01
+  displayName: "\uD790\uB7EC1"
   maxHp: 5
   illustration: {fileID: 21300000, guid: 861cf04a3fb020945ae86d120165d20c, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345604, type: 2}
@@ -22,6 +22,6 @@ MonoBehaviour:
   heroSupport:
     strikeBonus: 0
     turnStartHeroHeal: 1
-    mpGainOnTurnStart: 5
+    mpGainOnTurnStart: 10
     mpGainOnHeroStrike: 0
     defenseBonus: 2

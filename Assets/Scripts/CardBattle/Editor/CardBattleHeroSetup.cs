@@ -114,6 +114,7 @@ namespace CardGame.CardBattle.Editor
             asset.maxHp = 20;
             asset.baseAttack = 4;
             asset.maxMp = 100;
+            asset.mpGainPerTurn = 12;
             asset.normalAttackBehavior = normalAttack;
             asset.shieldBehavior = shield;
             EditorUtility.SetDirty(asset);

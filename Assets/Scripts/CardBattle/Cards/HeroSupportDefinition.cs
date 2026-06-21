@@ -127,27 +127,27 @@ namespace CardGame.CardBattle.Cards
                 case CardType.Ranged:
                     return new HeroSupportDefinition
                     {
-                        mpGainOnTurnStart = 15,
-                        mpGainOnHeroStrike = 5
+                        mpGainOnTurnStart = 22,
+                        mpGainOnHeroStrike = 8
                     };
                 case CardType.Healer:
                     return new HeroSupportDefinition
                     {
                         turnStartHeroHeal = 1,
-                        mpGainOnTurnStart = 5,
+                        mpGainOnTurnStart = 10,
                         defenseBonus = 2
                     };
                 case CardType.Musou:
                     return new HeroSupportDefinition
                     {
                         strikeBonus = 2,
-                        mpGainOnHeroStrike = 10
+                        mpGainOnHeroStrike = 14
                     };
                 default:
                     return new HeroSupportDefinition
                     {
                         strikeBonus = 1,
-                        mpGainOnHeroStrike = 5,
+                        mpGainOnHeroStrike = 8,
                         defenseBonus = 1
                     };
             }

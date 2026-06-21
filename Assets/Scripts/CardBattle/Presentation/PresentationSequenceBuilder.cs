@@ -56,13 +56,13 @@ namespace CardGame.CardBattle.Presentation
             for (var i = 0; i < events.Count; i++)
             {
                 var effectEvent = events[i];
-                if (effectEvent.Source == null)
-                {
-                    continue;
-                }
-
                 if (effectEvent.TargetCard != null)
                 {
+                    if (effectEvent.Source == null)
+                    {
+                        continue;
+                    }
+
                     var target = effectEvent.TargetCard;
                     cues.Add(new PresentationCue(
                         PresentationCueKind.PlayHealOnTargetPresentation,
@@ -81,11 +81,14 @@ namespace CardGame.CardBattle.Presentation
                 else if (effectEvent.TargetHero != null)
                 {
                     var hero = effectEvent.TargetHero;
-                    cues.Add(new PresentationCue(
-                        PresentationCueKind.PlayHeroSupportFromSlot,
-                        subjectId: effectEvent.Source.InstanceId,
-                        subjectHeroId: hero.InstanceId,
-                        isMpGain: effectEvent.Kind == TurnStartStatKind.MpGain));
+                    if (effectEvent.Source != null)
+                    {
+                        cues.Add(new PresentationCue(
+                            PresentationCueKind.PlayHeroSupportFromSlot,
+                            subjectId: effectEvent.Source.InstanceId,
+                            subjectHeroId: hero.InstanceId,
+                            isMpGain: effectEvent.Kind == TurnStartStatKind.MpGain));
+                    }
 
                     if (effectEvent.Kind == TurnStartStatKind.Heal)
                     {

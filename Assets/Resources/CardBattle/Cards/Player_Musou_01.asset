@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Player_Musou_01
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.CardDataAsset
   cardId: Player_Musou_01
-  displayName: Player Musou 01
+  displayName: "\uBB34\uC30D1"
   maxHp: 4
   illustration: {fileID: 21300000, guid: 32d30859bd85ec542bcbc18dda348004, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345603, type: 2}
@@ -23,5 +23,5 @@ MonoBehaviour:
     strikeBonus: 2
     turnStartHeroHeal: 0
     mpGainOnTurnStart: 0
-    mpGainOnHeroStrike: 10
+    mpGainOnHeroStrike: 14
     defenseBonus: 0

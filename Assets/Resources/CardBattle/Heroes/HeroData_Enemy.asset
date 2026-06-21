@@ -17,6 +17,7 @@ MonoBehaviour:
   maxHp: 20
   baseAttack: 4
   maxMp: 100
+  mpGainPerTurn: 12
   normalAttackBehavior: {fileID: 11400000, guid: 575b62fc7a94c6044b183abeda260b0d, type: 2}
   shieldBehavior: {fileID: 11400000, guid: 09241dd10feda6241a968b6733cece39, type: 2}
   portrait: {fileID: 21300000, guid: 4e258e3f8e501d94db6817cefb74704f, type: 3}

@@ -24,6 +24,11 @@ namespace CardGame.CardBattle.Cards
         [Min(1)]
         public int maxMp = 100;
 
+        [BoxGroup("기본")]
+        [LabelText("턴 시작 MP")]
+        [Min(0)]
+        public int mpGainPerTurn = 12;
+
         [BoxGroup("행동", centerLabel: true)]
         [Required]
         public HeroNormalAttackBehaviorAsset normalAttackBehavior;

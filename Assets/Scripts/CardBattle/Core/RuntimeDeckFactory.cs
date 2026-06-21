@@ -43,6 +43,7 @@ namespace CardGame.CardBattle.Core
             hero.maxHp = 20;
             hero.baseAttack = 4;
             hero.maxMp = 100;
+            hero.mpGainPerTurn = 12;
 
             var normalAttack = ScriptableObject.CreateInstance<HeroNormalAttackBehaviorAsset>();
             normalAttack.behaviorId = $"{teamPrefix}_hero_normal";
