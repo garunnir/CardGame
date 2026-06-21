@@ -1,6 +1,6 @@
 # CardGame — Card Battle
 
-> **YouTube 시연:** _(녹화 후 링크 추가)_
+> [**YouTube 시연:** ](https://youtu.be/_t9kFeKSj1g)
 
 턴제 3D 카드 배틀 프로토타입. 플레이어·적 각 6장(전장 3 + 대기 3), 영웅 패널, ScriptableObject 기반 행동·연출 파이프라인.
 
