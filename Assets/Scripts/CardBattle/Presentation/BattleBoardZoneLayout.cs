@@ -21,7 +21,7 @@ namespace CardGame.CardBattle.Presentation
         [BoxGroup("전장")]
         [LabelText("카드 간격")]
         [Min(0f)]
-        [SerializeField] private float cardSpacing = 1.2f;
+        [SerializeField] private float cardSpacing = 2f;
 
         [BoxGroup("대기열", centerLabel: true)]
         [LabelText("스택 원점")]
@@ -32,9 +32,15 @@ namespace CardGame.CardBattle.Presentation
         [LabelText("스택 간격 (StackOrigin 로컬)")]
         [SerializeField] private Vector3 reserveStackOffset;
 
+        [BoxGroup("영웅", centerLabel: true)]
+        [LabelText("측면 앵커")]
+        [SerializeField] private Transform heroAnchor;
+
         public bool IsPlayerTeam => isPlayerTeam;
 
         public Transform BattlefieldCenter => battlefieldCenter;
+
+        public Transform HeroAnchor => heroAnchor;
 
         public float CardSpacing => cardSpacing;
 
@@ -92,12 +98,21 @@ namespace CardGame.CardBattle.Presentation
             bool playerTeam,
             Transform center,
             Transform reserveOrigin,
-            float spacing = 1.2f)
+            Transform hero = null,
+            float? spacing = null)
         {
             isPlayerTeam = playerTeam;
             battlefieldCenter = center;
             reserveStackOrigin = reserveOrigin;
-            cardSpacing = spacing;
+            if (spacing.HasValue)
+            {
+                cardSpacing = spacing.Value;
+            }
+
+            if (hero != null)
+            {
+                heroAnchor = hero;
+            }
         }
 
         private bool HasBattlefieldCenter => battlefieldCenter != null;
@@ -135,6 +150,12 @@ namespace CardGame.CardBattle.Presentation
                 BattleBoardGizmos.DrawFlatCardRect(
                     reserveStackOrigin,
                     reserveStackOrigin.TransformPoint(GetReserveStackLocalOffset(i)));
+            }
+
+            if (heroAnchor != null)
+            {
+                Gizmos.color = new Color(0.95f, 0.75f, 0.25f, 0.9f);
+                BattleBoardGizmos.DrawFlatCardRect(heroAnchor, heroAnchor.position);
             }
         }
 #endif

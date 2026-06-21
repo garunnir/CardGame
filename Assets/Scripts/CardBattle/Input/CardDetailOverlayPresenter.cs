@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace CardGame.CardBattle.Input
 {
-    /// <summary>롱프레스 카드 상세 — Screen Space 오버레이.</summary>
+    /// <summary>롱프레스 카드·영웅 상세 — Screen Space 오버레이.</summary>
     public sealed class CardDetailOverlayPresenter : MonoBehaviour
     {
         [SerializeField] private CanvasGroup rootGroup;
@@ -21,6 +21,11 @@ namespace CardGame.CardBattle.Input
         }
 
         public void Show(CardDetailContext context)
+        {
+            Show(DetailOverlayContext.FromCard(context));
+        }
+
+        public void Show(DetailOverlayContext context)
         {
             if (rootGroup == null)
             {
@@ -50,7 +55,7 @@ namespace CardGame.CardBattle.Input
             rootGroup.gameObject.SetActive(false);
         }
 
-        private void ApplyContext(CardDetailContext context)
+        private void ApplyContext(DetailOverlayContext context)
         {
             if (cardImage != null)
             {
@@ -66,9 +71,7 @@ namespace CardGame.CardBattle.Input
 
             if (statsText != null)
             {
-                statsText.text = context.IsRevealed
-                    ? "HP " + context.CurrentHp + " / " + context.MaxHp + "\n공격 " + context.AttackPower
-                    : string.Empty;
+                statsText.text = BuildStatsText(context);
             }
 
             if (typeText != null)
@@ -80,6 +83,24 @@ namespace CardGame.CardBattle.Input
             {
                 contextText.text = context.ContextLines ?? string.Empty;
             }
+        }
+
+        private static string BuildStatsText(DetailOverlayContext context)
+        {
+            if (!context.IsRevealed)
+            {
+                return string.Empty;
+            }
+
+            if (context.Kind == DetailOverlayKind.Hero)
+            {
+                return "HP " + context.CurrentHp + " / " + context.MaxHp
+                    + "\n보호막 " + context.CurrentShield
+                    + "\nMP " + context.CurrentMp + " / " + context.MaxMp
+                    + "\n공격 " + context.AttackPower;
+            }
+
+            return "HP " + context.CurrentHp + " / " + context.MaxHp + "\n공격 " + context.AttackPower;
         }
     }
 }

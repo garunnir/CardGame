@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace CardGame.CardBattle.States
 {
-    /// <summary>플레이어 턴 — 카드 선택 후 적 타겟 선택.</summary>
+    /// <summary>플레이어 턴 — 카드 선택 후 적 타겟 또는 적 영웅 타겟 선택.</summary>
     public sealed class PlayerTurnState : BaseState
     {
         private readonly CardBattleTargetingPolicy targetingPolicy;
@@ -13,8 +13,9 @@ namespace CardGame.CardBattle.States
 
         public PlayerTurnState(IBattleContext context) : base(context)
         {
-            targetingPolicy = new CardBattleTargetingPolicy(model =>
-                CardTargetingRules.IsFaceUpBattlefieldCard(context.Field, model));
+            targetingPolicy = new CardBattleTargetingPolicy(
+                model => CardTargetingRules.IsFaceUpBattlefieldCard(context.Field, model)
+                    && context.Field.CanTeamAttack(true));
         }
 
         public override BattleFlowStateId StateId => BattleFlowStateId.PlayerTurn;
@@ -38,6 +39,18 @@ namespace CardGame.CardBattle.States
                 return;
             }
 
+            if (!Context.Field.CanTeamAttack(true))
+            {
+                Context.RaiseSkipBanner("병사 전멸 — 턴 스킵");
+                await UniTask.Delay(System.TimeSpan.FromSeconds(0.8f));
+                if (IsTransitionCurrent(generation))
+                {
+                    Context.ChangeState(new EnemyTurnState(Context));
+                }
+
+                return;
+            }
+
             Context.InputProvider.SetEnabled(true);
             Context.InputProvider.CardSelected -= OnCardSelected;
             Context.InputProvider.CardSelected += OnCardSelected;
@@ -47,6 +60,8 @@ namespace CardGame.CardBattle.States
             Context.InputProvider.CardDragStarted += OnCardDragStarted;
             Context.InputProvider.CardDragMoved += OnCardDragMoved;
             Context.InputProvider.CardDragEnded += OnCardDragEnded;
+            Context.HeroTargetRequested -= OnHeroTargetRequested;
+            Context.HeroTargetRequested += OnHeroTargetRequested;
         }
 
         public override void Exit()
@@ -55,7 +70,9 @@ namespace CardGame.CardBattle.States
             Context.InputProvider.CardDragStarted -= OnCardDragStarted;
             Context.InputProvider.CardDragMoved -= OnCardDragMoved;
             Context.InputProvider.CardDragEnded -= OnCardDragEnded;
+            Context.HeroTargetRequested -= OnHeroTargetRequested;
             Context.InputProvider.SetEnabled(false);
+            Context.SetEnemyHeroTargetEnabled(false);
             selectedAttackerId = default;
             Context.DragTargetingPresenter?.EndDrag();
         }
@@ -68,6 +85,25 @@ namespace CardGame.CardBattle.States
         private void SelectAttacker(CardInstanceId attackerId, CardModel attacker)
         {
             selectedAttackerId = attackerId;
+            UpdateHeroTargetUi(attacker);
+        }
+
+        private void UpdateHeroTargetUi(CardModel attacker)
+        {
+            var canTargetHero = attacker != null && Context.CanTargetEnemyHero(attacker);
+            Context.SetEnemyHeroTargetEnabled(canTargetHero);
+        }
+
+        private void OnHeroTargetRequested()
+        {
+            if (!TryGetSelectedAttacker(out var attacker)
+                || !Context.CanTargetEnemyHero(attacker))
+            {
+                return;
+            }
+
+            Context.PendingAction = new BattleActionRequest(attacker, Context.HeroArena.EnemyHero);
+            Context.ChangeState(new BattleState(Context, true));
         }
 
         private void OnCardSelected(CardInstanceId cardId)

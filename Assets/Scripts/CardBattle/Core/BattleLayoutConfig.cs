@@ -28,6 +28,16 @@ namespace CardGame.CardBattle.Core
 
 
 
+        [BoxGroup("프리팹", centerLabel: true)]
+
+        [LabelText("영웅 엔티티")]
+
+        [Required]
+
+        public HeroEntity heroEntityPrefab;
+
+
+
         [BoxGroup("플레이어", centerLabel: true)]
 
         [LabelText("카드 뒷면")]

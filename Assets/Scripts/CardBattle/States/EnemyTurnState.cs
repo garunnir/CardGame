@@ -1,5 +1,4 @@
 using CardGame.CardBattle.AI;
-using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
 using Cysharp.Threading.Tasks;
 
@@ -55,7 +54,16 @@ namespace CardGame.CardBattle.States
                     return;
                 }
 
+                if (!Context.Field.CanTeamAttack(false))
+                {
+                    Context.RaiseSkipBanner("적 병사 전멸 — 턴 스킵");
+                    await UniTask.Delay(System.TimeSpan.FromSeconds(0.8f));
+                    return;
+                }
+
                 var actions = EnemyAIController.BuildTurnActions(
+                    Context.Field,
+                    Context.HeroArena,
                     Context.Field.EnemyBattlefield,
                     Context.Field.PlayerBattlefield);
 

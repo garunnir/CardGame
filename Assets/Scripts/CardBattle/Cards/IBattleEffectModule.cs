@@ -61,6 +61,18 @@ namespace CardGame.CardBattle.Cards
       return new AttackResolution(primaryDamage, counterDamage, secondary);
     }
 
+    public static int CalculatePrimaryDamage(AttackContext context)
+    {
+      if (context.Attacker == null || context.Behavior == null)
+      {
+        return 0;
+      }
+
+      var collector = new AttackModuleCollector();
+      context.Behavior.CollectAttackModules(collector);
+      return collector.Primary?.CalculatePrimaryDamage(context) ?? 0;
+    }
+
     public static AttackResolution PlanForAiPreview(AttackContext context)
     {
       if (context.Attacker == null

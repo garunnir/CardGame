@@ -13,12 +13,21 @@ namespace CardGame.CardBattle.Editor
     public static class CardBattleBoardSetup
     {
         public const string PrefabPath = "Assets/Prefabs/CardBattle/CardEntity.prefab";
+        public const string HeroPrefabPath = "Assets/Prefabs/CardBattle/HeroEntity.prefab";
         public const string LayoutPath = "Assets/Resources/CardBattle/BattleLayout_Default.asset";
         public const string CardFaceMaterialPath = "Assets/Materials/CardBattle/CardFace_Default.mat";
         public const string CardFaceShaderPath = "Assets/Shaders/CardBattle/CardFaceUnlit.shader";
         private const float CardFaceAlphaCutoff = 0.5f;
 
         private static Mesh builtinQuad;
+
+        [MenuItem("CardGame/CardBattle/Create Hero Entity Prefab")]
+        public static void CreateHeroEntityPrefabMenu()
+        {
+            RebuildHeroEntityPrefab();
+            AssetDatabase.SaveAssets();
+            Debug.Log("[CardBattle] HeroEntity prefab: " + HeroPrefabPath);
+        }
 
         [MenuItem("CardGame/CardBattle/Create Card Entity Prefab")]
         public static void CreateCardEntityPrefabMenu()
@@ -53,7 +62,31 @@ namespace CardGame.CardBattle.Editor
             RewireBoardPresenter(playerZone, enemyZone);
             EnsureBattleBoardView(board.transform, camera);
             EditorUtility.SetDirty(board);
-            Debug.Log("[CardBattle] 보드 앵커 계층 연결 완료. 슬롯 위치·회전은 덮어쓰지 않습니다.");
+            Debug.Log("[CardBattle] 보드 앵커 계층 연결 완료. 기존 위치·회전·spacing 유지.");
+        }
+
+        [MenuItem("CardGame/CardBattle/Normalize Board Zone Hierarchy")]
+        public static void NormalizeBoardZoneHierarchyMenu()
+        {
+            var board = GameObject.Find("BattleBoard");
+            if (board == null)
+            {
+                Debug.LogError("[CardBattle] BattleBoard 오브젝트를 찾을 수 없습니다.");
+                return;
+            }
+
+            var (playerZone, enemyZone) = EnsureBattleBoardHierarchy(board.transform);
+            var playerChanged = NormalizeBoardZoneHierarchy(playerZone);
+            var enemyChanged = NormalizeBoardZoneHierarchy(enemyZone);
+
+            if (playerChanged || enemyChanged)
+            {
+                EditorUtility.SetDirty(board);
+                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                    UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+            }
+
+            Debug.Log("[CardBattle] 보드 존 계층 정규화 완료. Transform 위치·회전은 변경하지 않았습니다.");
         }
 
         [MenuItem("CardGame/CardBattle/Wire Default Decks To Scene")]
@@ -174,6 +207,58 @@ namespace CardGame.CardBattle.Editor
             EditorUtility.SetDirty(view);
         }
 
+        private static bool NormalizeBoardZoneHierarchy(Transform zoneRoot)
+        {
+            var zone = zoneRoot.GetComponent<BattleBoardZoneLayout>();
+            var center = zone != null ? zone.BattlefieldCenter : null;
+            if (center == null)
+            {
+                center = zoneRoot.Find("BattlefieldCenter");
+            }
+
+            if (center == null)
+            {
+                center = zoneRoot.Find("BattlefieldSlots/Slot_1") ?? zoneRoot.Find("Slot_1");
+            }
+
+            if (center == null)
+            {
+                return false;
+            }
+
+            var changed = false;
+            var slotsRoot = center.parent;
+            if (slotsRoot != null
+                && slotsRoot != zoneRoot
+                && slotsRoot.name == "BattlefieldSlots")
+            {
+                center.SetParent(zoneRoot, true);
+                changed = true;
+                if (slotsRoot.childCount == 0)
+                {
+                    UnityEngine.Object.DestroyImmediate(slotsRoot.gameObject);
+                }
+            }
+
+            if (center.name != "BattlefieldCenter")
+            {
+                center.name = "BattlefieldCenter";
+                changed = true;
+            }
+
+            if (zone != null)
+            {
+                zone.Configure(
+                    zone.IsPlayerTeam,
+                    center,
+                    zone.ReserveStackOrigin,
+                    hero: zone.HeroAnchor);
+                EditorUtility.SetDirty(zone);
+            }
+
+            return changed;
+        }
+
         public static BattleBoardZoneLayout EnsureBoardZoneLayout(
             Transform zoneRoot,
             bool isPlayerTeam)
@@ -184,18 +269,7 @@ namespace CardGame.CardBattle.Editor
                 zone = zoneRoot.gameObject.AddComponent<BattleBoardZoneLayout>();
             }
 
-            var slotsRoot = zoneRoot.Find("BattlefieldSlots");
-            if (slotsRoot != null)
-            {
-                UnityEngine.Object.DestroyImmediate(slotsRoot.gameObject);
-            }
-
-            var center = GetOrCreateChild(zoneRoot, "BattlefieldCenter", out var centerCreated);
-            if (centerCreated)
-            {
-                center.localPosition = Vector3.zero;
-                center.localRotation = Quaternion.identity;
-            }
+            var center = ResolveBattlefieldCenter(zoneRoot, zone);
 
             var reserveRoot = GetOrCreateChild(zoneRoot, "Reserve", out var reserveRootCreated);
             if (reserveRootCreated)
@@ -208,12 +282,66 @@ namespace CardGame.CardBattle.Editor
             if (stackCreated)
             {
                 stackOrigin.localPosition = Vector3.zero;
-                stackOrigin.localRotation = Quaternion.identity;
+                stackOrigin.localRotation = CardBoardAnchorDefaults.FlatOnBoard;
             }
 
-            zone.Configure(isPlayerTeam, center, stackOrigin);
+            var heroAnchor = GetOrCreateChild(zoneRoot, "HeroAnchor", out var heroCreated);
+            if (heroCreated)
+            {
+                heroAnchor.localPosition = Vector3.zero;
+                heroAnchor.localRotation = CardBoardAnchorDefaults.FlatOnBoard;
+            }
+
+            zone.Configure(isPlayerTeam, center, stackOrigin, hero: heroAnchor);
             EditorUtility.SetDirty(zone);
             return zone;
+        }
+
+        /// <summary>영웅 3D 마이그레이션용 — 카드 전장/대기열 앵커는 건드리지 않음.</summary>
+        public static void EnsureHeroAnchorOnly(Transform zoneRoot, bool isPlayerTeam)
+        {
+            var zone = zoneRoot.GetComponent<BattleBoardZoneLayout>();
+            if (zone == null)
+            {
+                zone = zoneRoot.gameObject.AddComponent<BattleBoardZoneLayout>();
+            }
+
+            var heroAnchor = GetOrCreateChild(zoneRoot, "HeroAnchor", out var heroCreated);
+            if (heroCreated)
+            {
+                heroAnchor.localPosition = Vector3.zero;
+                heroAnchor.localRotation = CardBoardAnchorDefaults.FlatOnBoard;
+            }
+
+            zone.Configure(
+                isPlayerTeam,
+                zone.BattlefieldCenter,
+                zone.ReserveStackOrigin,
+                hero: heroAnchor);
+            EditorUtility.SetDirty(zone);
+        }
+
+        private static Transform ResolveBattlefieldCenter(Transform zoneRoot, BattleBoardZoneLayout zone)
+        {
+            if (zone.BattlefieldCenter != null)
+            {
+                return zone.BattlefieldCenter;
+            }
+
+            var namedCenter = zoneRoot.Find("BattlefieldCenter");
+            if (namedCenter != null)
+            {
+                return namedCenter;
+            }
+
+            var center = GetOrCreateChild(zoneRoot, "BattlefieldCenter", out var centerCreated);
+            if (centerCreated)
+            {
+                center.localPosition = Vector3.zero;
+                center.localRotation = CardBoardAnchorDefaults.FlatOnBoard;
+            }
+
+            return center;
         }
 
         private static Transform GetOrCreateChild(Transform parent, string childName)
@@ -316,12 +444,261 @@ namespace CardGame.CardBattle.Editor
             }
         }
 
+        public static HeroEntity EnsureHeroEntityPrefab()
+        {
+            var existingGo = AssetDatabase.LoadAssetAtPath<GameObject>(HeroPrefabPath);
+            if (existingGo != null)
+            {
+                var entity = existingGo.GetComponent<HeroEntity>();
+                if (entity != null)
+                {
+                    return entity;
+                }
+            }
+
+            return RebuildHeroEntityPrefab();
+        }
+
+        private static HeroEntity RebuildHeroEntityPrefab()
+        {
+            var existingGo = AssetDatabase.LoadAssetAtPath<GameObject>(HeroPrefabPath);
+            if (existingGo != null)
+            {
+                AssetDatabase.DeleteAsset(HeroPrefabPath);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(HeroPrefabPath) ?? "Assets/Prefabs/CardBattle");
+
+            var faceMaterial = EnsureCardFaceMaterial();
+            if (faceMaterial == null)
+            {
+                return null;
+            }
+
+            var root = new GameObject("HeroEntity");
+            try
+            {
+                var shakeRoot = new GameObject("ShakeRoot");
+                shakeRoot.transform.SetParent(root.transform, false);
+
+                var collider = shakeRoot.AddComponent<BoxCollider>();
+                collider.size = new Vector3(CardFaceView.DefaultWidth, CardFaceView.DefaultHeight, 0.08f);
+                collider.center = Vector3.zero;
+
+                var front = CreateCardFace(
+                    "Front",
+                    shakeRoot.transform,
+                    new Vector3(0f, 0f, HeroVisualSorting.PortraitLocalZ),
+                    Quaternion.identity,
+                    faceMaterial,
+                    sortingOrder: HeroVisualSorting.Portrait);
+
+                var nameLabel = CreateWorldLabel(
+                    "NameLabel",
+                    shakeRoot.transform,
+                    new Vector3(0f, 0.75f, 0f),
+                    2.4f,
+                    HeroVisualSorting.NameLabel);
+                var hpShieldBar = CreateHeroHpShieldBar(shakeRoot.transform, faceMaterial);
+                var hpLabel = CreateWorldLabel(
+                    "HpLabel",
+                    shakeRoot.transform,
+                    new Vector3(0f, -0.68f, 0f),
+                    1.6f,
+                    HeroVisualSorting.StatLabel);
+                var mpBar = CreateHeroMpBar(shakeRoot.transform, faceMaterial);
+                var mpLabel = CreateWorldLabel(
+                    "MpLabel",
+                    shakeRoot.transform,
+                    new Vector3(0f, -0.95f, 0f),
+                    1.6f,
+                    HeroVisualSorting.StatLabel);
+
+                var entity = root.AddComponent<HeroEntity>();
+                WireHeroEntity(entity, shakeRoot.transform, front, nameLabel, hpLabel, mpLabel, hpShieldBar, mpBar);
+
+                var prefabRoot = PrefabUtility.SaveAsPrefabAsset(root, HeroPrefabPath);
+                if (prefabRoot == null)
+                {
+                    Debug.LogError("[CardBattle] HeroEntity 프리팹 저장 실패: " + HeroPrefabPath);
+                    return null;
+                }
+
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                return prefabRoot.GetComponent<HeroEntity>();
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static HeroHpShieldBarView CreateHeroHpShieldBar(Transform parent, Material sharedMaterial)
+        {
+            var root = new GameObject("HpShieldBar");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(
+                0f,
+                HeroHpShieldBarView.DefaultLocalY,
+                HeroHpShieldBarView.DefaultLocalZ);
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+
+            var background = CreateBarQuad(
+                "Background",
+                root.transform,
+                Vector3.zero,
+                new Vector3(HeroHpShieldBarView.DefaultWidth, HeroHpShieldBarView.DefaultHeight, 1f),
+                sharedMaterial,
+                HeroHpShieldBarView.BackgroundSortingOrder);
+
+            var hpFillRoot = new GameObject("HpFillRoot").transform;
+            hpFillRoot.SetParent(root.transform, false);
+            hpFillRoot.localPosition = Vector3.zero;
+            hpFillRoot.localRotation = Quaternion.identity;
+            hpFillRoot.localScale = new Vector3(HeroHpShieldBarView.DefaultWidth, HeroHpShieldBarView.DefaultHeight, 1f);
+            var hpFill = CreateBarQuad(
+                "HpFill",
+                hpFillRoot,
+                Vector3.zero,
+                Vector3.one,
+                sharedMaterial,
+                HeroHpShieldBarView.HpFillSortingOrder);
+
+            var shieldFillRoot = new GameObject("ShieldFillRoot").transform;
+            shieldFillRoot.SetParent(root.transform, false);
+            shieldFillRoot.localPosition = Vector3.zero;
+            shieldFillRoot.localRotation = Quaternion.identity;
+            shieldFillRoot.localScale = new Vector3(HeroHpShieldBarView.DefaultWidth, HeroHpShieldBarView.DefaultHeight, 1f);
+            var shieldFill = CreateBarQuad(
+                "ShieldFill",
+                shieldFillRoot,
+                Vector3.zero,
+                Vector3.one,
+                sharedMaterial,
+                HeroHpShieldBarView.ShieldFillSortingOrder);
+
+            var bar = root.AddComponent<HeroHpShieldBarView>();
+            var so = new SerializedObject(bar);
+            so.FindProperty("hpFillRoot").objectReferenceValue = hpFillRoot;
+            so.FindProperty("shieldFillRoot").objectReferenceValue = shieldFillRoot;
+            so.FindProperty("backgroundRenderer").objectReferenceValue = background;
+            so.FindProperty("hpFillRenderer").objectReferenceValue = hpFill;
+            so.FindProperty("shieldFillRenderer").objectReferenceValue = shieldFill;
+            so.FindProperty("barWidth").floatValue = HeroHpShieldBarView.DefaultWidth;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return bar;
+        }
+
+        private static CardHpBarView CreateHeroMpBar(Transform parent, Material sharedMaterial)
+        {
+            var root = new GameObject("MpBar");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(0f, -0.82f, HeroVisualSorting.BarLocalZ);
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+
+            var background = CreateBarQuad(
+                "Background",
+                root.transform,
+                Vector3.zero,
+                new Vector3(CardHpBarView.DefaultWidth, CardHpBarView.DefaultHeight, 1f),
+                sharedMaterial,
+                HeroVisualSorting.BarBackground);
+            var fillRoot = new GameObject("FillRoot").transform;
+            fillRoot.SetParent(root.transform, false);
+            fillRoot.localPosition = Vector3.zero;
+            fillRoot.localRotation = Quaternion.identity;
+            fillRoot.localScale = new Vector3(CardHpBarView.DefaultWidth, CardHpBarView.DefaultHeight, 1f);
+
+            var fill = CreateBarQuad(
+                "Fill",
+                fillRoot,
+                Vector3.zero,
+                Vector3.one,
+                sharedMaterial,
+                HeroVisualSorting.BarFill);
+
+            var mpBar = root.AddComponent<CardHpBarView>();
+            var so = new SerializedObject(mpBar);
+            so.FindProperty("fillRoot").objectReferenceValue = fillRoot;
+            so.FindProperty("backgroundRenderer").objectReferenceValue = background;
+            so.FindProperty("fillRenderer").objectReferenceValue = fill;
+            so.FindProperty("barWidth").floatValue = CardHpBarView.DefaultWidth;
+            so.FindProperty("fillColor").colorValue = new Color(0.55f, 0.45f, 0.95f, 1f);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return mpBar;
+        }
+
+        private static CardHpBarView CreateMpBar(Transform parent, Material sharedMaterial)
+        {
+            var root = new GameObject("MpBar");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(0f, -0.82f, CardHpBarView.DefaultLocalZ);
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+
+            var background = CreateBarQuad(
+                "Background",
+                root.transform,
+                Vector3.zero,
+                new Vector3(CardHpBarView.DefaultWidth, CardHpBarView.DefaultHeight, 1f),
+                sharedMaterial,
+                CardHpBarView.BackgroundSortingOrder);
+            var fillRoot = new GameObject("FillRoot").transform;
+            fillRoot.SetParent(root.transform, false);
+            fillRoot.localPosition = Vector3.zero;
+            fillRoot.localRotation = Quaternion.identity;
+            fillRoot.localScale = new Vector3(CardHpBarView.DefaultWidth, CardHpBarView.DefaultHeight, 1f);
+
+            var fill = CreateBarQuad(
+                "Fill",
+                fillRoot,
+                Vector3.zero,
+                Vector3.one,
+                sharedMaterial,
+                CardHpBarView.FillSortingOrder);
+
+            var mpBar = root.AddComponent<CardHpBarView>();
+            var so = new SerializedObject(mpBar);
+            so.FindProperty("fillRoot").objectReferenceValue = fillRoot;
+            so.FindProperty("backgroundRenderer").objectReferenceValue = background;
+            so.FindProperty("fillRenderer").objectReferenceValue = fill;
+            so.FindProperty("barWidth").floatValue = CardHpBarView.DefaultWidth;
+            so.FindProperty("fillColor").colorValue = new Color(0.55f, 0.45f, 0.95f, 1f);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return mpBar;
+        }
+
+        private static void WireHeroEntity(
+            HeroEntity entity,
+            Transform shakeRoot,
+            CardFaceView front,
+            TextMeshPro nameLabel,
+            TextMeshPro hpLabel,
+            TextMeshPro mpLabel,
+            HeroHpShieldBarView hpShieldBar,
+            CardHpBarView mpBar)
+        {
+            var so = new SerializedObject(entity);
+            so.FindProperty("shakeRoot").objectReferenceValue = shakeRoot;
+            so.FindProperty("frontFace").objectReferenceValue = front;
+            so.FindProperty("nameLabel").objectReferenceValue = nameLabel;
+            so.FindProperty("hpLabel").objectReferenceValue = hpLabel;
+            so.FindProperty("mpLabel").objectReferenceValue = mpLabel;
+            so.FindProperty("hpShieldBar").objectReferenceValue = hpShieldBar;
+            so.FindProperty("mpBar").objectReferenceValue = mpBar;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         public static BattleLayoutConfig EnsureBattleLayoutAsset()
         {
             var existing = AssetDatabase.LoadAssetAtPath<BattleLayoutConfig>(LayoutPath);
             if (existing != null)
             {
                 existing.cardEntityPrefab = EnsureCardEntityPrefab();
+                existing.heroEntityPrefab = EnsureHeroEntityPrefab();
                 EditorUtility.SetDirty(existing);
                 return existing;
             }
@@ -330,9 +707,10 @@ namespace CardGame.CardBattle.Editor
 
             var layout = ScriptableObject.CreateInstance<BattleLayoutConfig>();
             layout.cardEntityPrefab = EnsureCardEntityPrefab();
-            if (layout.cardEntityPrefab == null)
+            layout.heroEntityPrefab = EnsureHeroEntityPrefab();
+            if (layout.cardEntityPrefab == null || layout.heroEntityPrefab == null)
             {
-                Debug.LogError("[CardBattle] BattleLayout 생성 중단 — CardEntity 프리팹이 없습니다.");
+                Debug.LogError("[CardBattle] BattleLayout 생성 중단 — CardEntity/HeroEntity 프리팹이 없습니다.");
                 return null;
             }
 
@@ -463,7 +841,12 @@ namespace CardGame.CardBattle.Editor
             return builtinQuad;
         }
 
-        private static TextMeshPro CreateWorldLabel(string name, Transform parent, Vector3 localPos, float fontSize)
+        private static TextMeshPro CreateWorldLabel(
+            string name,
+            Transform parent,
+            Vector3 localPos,
+            float fontSize,
+            int sortingOrder = -1)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -476,9 +859,11 @@ namespace CardGame.CardBattle.Editor
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.rectTransform.sizeDelta = new Vector2(2f, 0.5f);
             tmp.text = name;
-            tmp.sortingOrder = name == "HpLabel"
-                ? CardFaceView.HpLabelSortingOrder
-                : CardFaceView.NameLabelSortingOrder;
+            tmp.sortingOrder = sortingOrder >= 0
+                ? sortingOrder
+                : name == "HpLabel"
+                    ? CardFaceView.HpLabelSortingOrder
+                    : CardFaceView.NameLabelSortingOrder;
 
             var labelPosition = go.transform.localPosition;
             labelPosition.z = CardFaceView.LabelLocalZ;

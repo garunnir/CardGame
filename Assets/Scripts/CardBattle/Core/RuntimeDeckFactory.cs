@@ -28,10 +28,35 @@ namespace CardGame.CardBattle.Core
                 asset.displayName = $"{teamPrefix} {type}";
                 asset.behavior = CardBehaviorLibrary.GetRuntimeDefault(type);
                 asset.maxHp = type == CardType.Musou ? 4 : 5;
+                asset.heroSupport = HeroSupportLibrary.GetDefaultForType(type);
                 list.Add(asset);
             }
 
             return list;
+        }
+
+        public static HeroDataAsset CreateDefaultHero(string teamPrefix)
+        {
+            var hero = ScriptableObject.CreateInstance<HeroDataAsset>();
+            hero.heroId = $"{teamPrefix}_hero";
+            hero.displayName = $"{teamPrefix} Commander";
+            hero.maxHp = 20;
+            hero.baseAttack = 4;
+            hero.maxMp = 100;
+
+            var normalAttack = ScriptableObject.CreateInstance<HeroNormalAttackBehaviorAsset>();
+            normalAttack.behaviorId = $"{teamPrefix}_hero_normal";
+            normalAttack.displayName = "평타";
+            normalAttack.counterDamageOverride = 0;
+
+            var shield = ScriptableObject.CreateInstance<HeroShieldBehaviorAsset>();
+            shield.behaviorId = $"{teamPrefix}_hero_shield";
+            shield.displayName = "보호막";
+            shield.shieldAmount = 5;
+
+            hero.normalAttackBehavior = normalAttack;
+            hero.shieldBehavior = shield;
+            return hero;
         }
 
         public static bool IsDeckValid(IList<CardDataAsset> deck)

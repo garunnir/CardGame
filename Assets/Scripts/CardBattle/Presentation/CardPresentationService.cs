@@ -140,6 +140,106 @@ namespace CardGame.CardBattle.Presentation
             PlayClip(sfx, vfx, view);
         }
 
+        public void PlayOnHitToHero(CardModel attacker, IPresentationTargetView heroView)
+        {
+            if (attacker == null)
+            {
+                return;
+            }
+
+            BehaviorPresentationClips.ResolveOnHit(attacker.Behavior, out var sfx, out var vfx);
+            PlayClipOnTarget(sfx, vfx, heroView);
+        }
+
+        public void PlayHeroReceivedHit(HeroModel hero, IPresentationTargetView heroView)
+        {
+            if (hero == null)
+            {
+                return;
+            }
+
+            AudioClip sfx = null;
+            GameObject vfx = null;
+            if (hero.NormalAttackBehavior != null)
+            {
+                sfx = hero.NormalAttackBehavior.presentation.receivedHitSfx;
+                vfx = hero.NormalAttackBehavior.presentation.receivedHitVfxPrefab;
+            }
+
+            PlayClipOnTarget(sfx, vfx, heroView);
+        }
+
+        public void PlayHeroCounterOnHit(HeroModel defender, ICardBattleView attackerView)
+        {
+            PlayHeroReceivedHit(defender, attackerView != null ? new CardPresentationTargetAdapter(attackerView) : null);
+        }
+
+        public void PlayHeroStrike(HeroModel striker, IPresentationTargetView strikerView)
+        {
+            if (striker?.NormalAttackBehavior == null)
+            {
+                return;
+            }
+
+            var presentation = striker.NormalAttackBehavior.presentation;
+            audio?.PlaySfx(presentation.strikeSfx);
+            SpawnVfxOnTarget(presentation.strikeVfxPrefab, strikerView);
+        }
+
+        public void PlayHeroShieldBuff(HeroModel striker, IPresentationTargetView strikerView, float bloomIntensity)
+        {
+            if (striker?.ShieldBehavior == null)
+            {
+                return;
+            }
+
+            var presentation = striker.ShieldBehavior.presentation;
+            audio?.PlaySfx(presentation.shieldBuffSfx);
+            SpawnVfxOnTarget(presentation.shieldBuffVfxPrefab, strikerView);
+        }
+
+        public void PlayHeroSupportFromSlot(
+            CardModel sourceCard,
+            HeroArenaPresenter heroPresenter,
+            HeroModel hero,
+            bool isMpGain)
+        {
+            if (sourceCard == null || hero == null || heroPresenter == null)
+            {
+                return;
+            }
+
+            if (sourceCard.Behavior is HealerBehaviorAsset healer && !isMpGain)
+            {
+                audio?.PlaySfx(healer.presentation.turnHealSfx);
+                SpawnVfxOnTarget(
+                    healer.presentation.turnHealVfxPrefab,
+                    heroPresenter.GetPresentationView(hero));
+            }
+            else
+            {
+                audio?.PlaySfx(null);
+            }
+        }
+
+        private void PlayClipOnTarget(AudioClip clip, GameObject vfxPrefab, IPresentationTargetView view)
+        {
+            audio?.PlaySfx(clip);
+            SpawnVfxOnTarget(vfxPrefab, view);
+        }
+
+        private static void SpawnVfxOnTarget(GameObject prefab, IPresentationTargetView view)
+        {
+            if (prefab == null || view?.ViewTransform == null)
+            {
+                return;
+            }
+
+            var anchor = view.ViewTransform;
+            var instance = UnityEngine.Object.Instantiate(prefab, anchor.position, anchor.rotation);
+            UnityEngine.Object.Destroy(instance, DefaultVfxLifetime);
+        }
+
         private void PlayAttackClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
         {
             audio?.PlaySfx(clip);

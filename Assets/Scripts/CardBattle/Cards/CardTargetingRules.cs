@@ -21,5 +21,29 @@ namespace CardGame.CardBattle.Cards
         {
             return IsFaceUpBattlefieldCard(field, model);
         }
+
+        public static bool CanTargetEnemyHero(BattleField field, HeroArenaField heroArena, CardModel attacker)
+        {
+            return attacker != null
+                && attacker.IsAlive
+                && attacker.IsPlayerTeam
+                && field != null
+                && field.IsTargetableOnBattlefield(attacker)
+                && field.IsCardPoolExhausted(false)
+                && heroArena?.EnemyHero != null
+                && heroArena.EnemyHero.IsAlive;
+        }
+
+        public static bool CanTargetPlayerHero(BattleField field, HeroArenaField heroArena, CardModel attacker)
+        {
+            return attacker != null
+                && attacker.IsAlive
+                && !attacker.IsPlayerTeam
+                && field != null
+                && field.IsTargetableOnBattlefield(attacker)
+                && field.IsCardPoolExhausted(true)
+                && heroArena?.PlayerHero != null
+                && heroArena.PlayerHero.IsAlive;
+        }
     }
 }

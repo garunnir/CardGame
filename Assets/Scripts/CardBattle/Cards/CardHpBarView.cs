@@ -45,6 +45,20 @@ namespace CardGame.CardBattle.Cards
             ApplyFillScale();
         }
 
+        public void ApplySortingOrders(int backgroundOrder, int fillOrder)
+        {
+            ApplyRendererOrder(backgroundRenderer, backgroundOrder);
+            ApplyRendererOrder(fillRenderer, fillOrder);
+        }
+
+        private static void ApplyRendererOrder(MeshRenderer renderer, int order)
+        {
+            if (renderer != null)
+            {
+                renderer.sortingOrder = order;
+            }
+        }
+
         private void Awake()
         {
             RefreshColors();

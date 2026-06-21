@@ -1,5 +1,6 @@
-using System.IO;
+﻿using System.IO;
 using CardGame.CardBattle.Bridge;
+using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
 using CardGame.CardBattle.Input;
 using CardGame.CardBattle.Presentation;
@@ -46,6 +47,7 @@ namespace CardGame.CardBattle.Editor
             var turnBanner = CreateTurnBanner(canvasGo.transform);
             var playerReserve = CreateLabel(canvasGo.transform, "PlayerReserveText", new Vector2(-760f, -420f), "대기 3");
             var enemyReserve = CreateLabel(canvasGo.transform, "EnemyReserveText", new Vector2(760f, 420f), "대기 3");
+            var heroArenaPresenter = EnsureHeroArenaPresenter3D(layout, playerBoardRoot, enemyBoardRoot);
             var winPanel = CreateResultPanel(canvasGo.transform, "WinPanel", "승리!", new Color(0.1f, 0.35f, 0.15f, 0.92f));
             var losePanel = CreateResultPanel(canvasGo.transform, "LosePanel", "패배...", new Color(0.35f, 0.1f, 0.1f, 0.92f));
 
@@ -60,7 +62,7 @@ namespace CardGame.CardBattle.Editor
 
             WireUIManager(uiManager, canvasGo, turnBanner.text, turnBanner.group,
                 playerReserve, enemyReserve, winPanel.panel, losePanel.panel, winPanel.button);
-            WireGameManager(gameManager, uiManager, boardPresenter, dragPresenter, cardDetailOverlay);
+            WireGameManager(gameManager, uiManager, boardPresenter, dragPresenter, cardDetailOverlay, heroArenaPresenter);
             WireVolume(uiManager, volume);
             WireBridge(systemsGo, gameManager);
 
@@ -130,6 +132,214 @@ namespace CardGame.CardBattle.Editor
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
             EditorSceneManager.SaveOpenScenes();
             Debug.Log("[CardBattle] CardDetailOverlay 연결 완료 → GameManager.cardDetailOverlay");
+        }
+
+        [MenuItem("CardGame/CardBattle/Ensure Hero Arena Presenter")]
+        public static void EnsureHeroArenaPresenterMenu()
+        {
+            MigrateHeroesTo3DMenu();
+        }
+
+        [MenuItem("CardGame/CardBattle/Migrate Heroes To 3D")]
+        public static void MigrateHeroesTo3DMenu()
+        {
+            CardBattleHeroSetup.CreateDefaultHeroAssets();
+            CardBattleBoardSetup.EnsureBattleLayoutAsset();
+            CardBattleBoardSetup.EnsureHeroEntityPrefab();
+
+            if (File.Exists(ScenePath))
+            {
+                EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            }
+
+            var gameManager = Object.FindFirstObjectByType<GameManager>();
+            if (gameManager == null)
+            {
+                Debug.LogError("[CardBattle] GameManager를 찾을 수 없습니다.");
+                return;
+            }
+
+            var bridge = Object.FindFirstObjectByType<BattleBridge>();
+            if (bridge == null)
+            {
+                Debug.LogError("[CardBattle] BattleBridge를 찾을 수 없습니다.");
+                return;
+            }
+
+            var board = GameObject.Find("BattleBoard");
+            if (board == null)
+            {
+                Debug.LogError("[CardBattle] BattleBoard를 찾을 수 없습니다.");
+                return;
+            }
+
+            var (playerZone, enemyZone) = CardBattleBoardSetup.EnsureBattleBoardHierarchy(board.transform);
+            CardBattleBoardSetup.EnsureHeroAnchorOnly(playerZone, isPlayerTeam: true);
+            CardBattleBoardSetup.EnsureHeroAnchorOnly(enemyZone, isPlayerTeam: false);
+
+            RemoveLegacyHeroUiPanels();
+
+            var layout = AssetDatabase.LoadAssetAtPath<BattleLayoutConfig>(CardBattleBoardSetup.LayoutPath);
+            var presenter = EnsureHeroArenaPresenter3D(layout, playerZone, enemyZone);
+
+            WireGameManagerHeroArena(gameManager, presenter);
+
+            var bridgeSo = new SerializedObject(bridge);
+            CardBattleHeroSetup.WireDefaultHeroes(bridgeSo);
+            bridgeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            EditorUtility.SetDirty(gameManager);
+            EditorUtility.SetDirty(presenter);
+            EditorUtility.SetDirty(bridge);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorSceneManager.SaveOpenScenes();
+            Debug.Log("[CardBattle] 영웅 3D 마이그레이션 완료 — HeroAnchor + HeroEntity.");
+        }
+
+        private static void RemoveLegacyHeroUiPanels()
+        {
+            var canvasGo = GameObject.Find("BattleCanvas");
+            if (canvasGo == null)
+            {
+                var fallbackCanvas = Object.FindFirstObjectByType<Canvas>();
+                canvasGo = fallbackCanvas != null ? fallbackCanvas.gameObject : null;
+            }
+
+            if (canvasGo == null)
+            {
+                return;
+            }
+
+            var playerPanel = canvasGo.transform.Find("PlayerHeroPanel");
+            if (playerPanel != null)
+            {
+                Object.DestroyImmediate(playerPanel.gameObject);
+            }
+
+            var enemyPanel = canvasGo.transform.Find("EnemyHeroPanel");
+            if (enemyPanel != null)
+            {
+                Object.DestroyImmediate(enemyPanel.gameObject);
+            }
+
+            var legacyPresenter = canvasGo.GetComponentInChildren<HeroArenaPresenter>(true);
+            if (legacyPresenter != null)
+            {
+                Object.DestroyImmediate(legacyPresenter.gameObject);
+            }
+        }
+
+        private static HeroArenaPresenter EnsureHeroArenaPresenter3D(
+            BattleLayoutConfig layout,
+            Transform playerZone,
+            Transform enemyZone)
+        {
+            var board = GameObject.Find("BattleBoard")?.transform;
+            if (board == null && playerZone != null)
+            {
+                board = playerZone;
+                while (board.parent != null && board.name != "BattleBoard")
+                {
+                    board = board.parent;
+                }
+            }
+
+            if (board == null)
+            {
+                board = new GameObject("BattleBoard").transform;
+            }
+
+            var existing = board.GetComponentInChildren<HeroArenaPresenter>(true);
+            HeroArenaPresenter presenter;
+            if (existing != null)
+            {
+                presenter = existing;
+            }
+            else
+            {
+                var presenterGo = new GameObject("HeroArenaPresenter");
+                presenterGo.transform.SetParent(board, false);
+                presenter = presenterGo.AddComponent<HeroArenaPresenter>();
+            }
+
+            WireHeroArenaPresenter3D(presenter, layout, playerZone, enemyZone);
+            SpawnHeroEntitiesInScene(presenter, layout, playerZone, enemyZone);
+            return presenter;
+        }
+
+        private static void SpawnHeroEntitiesInScene(
+            HeroArenaPresenter presenter,
+            BattleLayoutConfig layout,
+            Transform playerZone,
+            Transform enemyZone)
+        {
+            if (layout == null || layout.heroEntityPrefab == null)
+            {
+                return;
+            }
+
+            var playerLayout = playerZone != null ? playerZone.GetComponent<BattleBoardZoneLayout>() : null;
+            var enemyLayout = enemyZone != null ? enemyZone.GetComponent<BattleBoardZoneLayout>() : null;
+
+            var playerHero = SpawnOrGetHeroEntity(layout.heroEntityPrefab, playerLayout?.HeroAnchor, "PlayerHeroEntity");
+            var enemyHero = SpawnOrGetHeroEntity(layout.heroEntityPrefab, enemyLayout?.HeroAnchor, "EnemyHeroEntity");
+
+            var so = new SerializedObject(presenter);
+            so.FindProperty("playerHeroEntity").objectReferenceValue = playerHero;
+            so.FindProperty("enemyHeroEntity").objectReferenceValue = enemyHero;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(presenter);
+        }
+
+        private static HeroEntity SpawnOrGetHeroEntity(HeroEntity prefab, Transform anchor, string objectName)
+        {
+            if (prefab == null || anchor == null)
+            {
+                return null;
+            }
+
+            var existing = anchor.GetComponentInChildren<HeroEntity>(true);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            var instance = (HeroEntity)PrefabUtility.InstantiatePrefab(prefab, anchor);
+            if (instance == null)
+            {
+                return null;
+            }
+
+            instance.name = objectName;
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            instance.transform.localScale = Vector3.one;
+            return instance;
+        }
+
+        private static void WireHeroArenaPresenter3D(
+            HeroArenaPresenter presenter,
+            BattleLayoutConfig layout,
+            Transform playerZone,
+            Transform enemyZone)
+        {
+            var playerLayout = playerZone != null ? playerZone.GetComponent<BattleBoardZoneLayout>() : null;
+            var enemyLayout = enemyZone != null ? enemyZone.GetComponent<BattleBoardZoneLayout>() : null;
+
+            var so = new SerializedObject(presenter);
+            so.FindProperty("layoutConfig").objectReferenceValue = layout;
+            so.FindProperty("playerZoneLayout").objectReferenceValue = playerLayout;
+            so.FindProperty("enemyZoneLayout").objectReferenceValue = enemyLayout;
+            so.FindProperty("playerHeroEntity").objectReferenceValue = null;
+            so.FindProperty("enemyHeroEntity").objectReferenceValue = null;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(presenter);
+        }
+
+        [MenuItem("CardGame/CardBattle/Ensure Hero Panel Stat Bars")]
+        public static void EnsureHeroPanelStatBarsMenu()
+        {
+            MigrateHeroesTo3DMenu();
         }
 
         private static void EnsureEventSystem()
@@ -496,6 +706,24 @@ namespace CardGame.CardBattle.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+
+        private static void WireGameManager(
+            GameManager gm,
+            UIManager ui,
+            CardBoardPresenter boardPresenter,
+            DragTargetingPresenter dragPresenter,
+            CardDetailOverlayPresenter cardDetailOverlay,
+            HeroArenaPresenter heroArenaPresenter)
+        {
+            var so = new SerializedObject(gm);
+            so.FindProperty("uiManager").objectReferenceValue = ui;
+            so.FindProperty("cardBoardPresenter").objectReferenceValue = boardPresenter;
+            so.FindProperty("dragTargetingPresenter").objectReferenceValue = dragPresenter;
+            so.FindProperty("cardDetailOverlay").objectReferenceValue = cardDetailOverlay;
+            so.FindProperty("heroArenaPresenter").objectReferenceValue = heroArenaPresenter;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         private static void WireGameManager(
             GameManager gm,
             UIManager ui,
@@ -503,12 +731,7 @@ namespace CardGame.CardBattle.Editor
             DragTargetingPresenter dragPresenter,
             CardDetailOverlayPresenter cardDetailOverlay)
         {
-            var so = new SerializedObject(gm);
-            so.FindProperty("uiManager").objectReferenceValue = ui;
-            so.FindProperty("cardBoardPresenter").objectReferenceValue = boardPresenter;
-            so.FindProperty("dragTargetingPresenter").objectReferenceValue = dragPresenter;
-            so.FindProperty("cardDetailOverlay").objectReferenceValue = cardDetailOverlay;
-            so.ApplyModifiedPropertiesWithoutUndo();
+            WireGameManager(gm, ui, boardPresenter, dragPresenter, cardDetailOverlay, null);
         }
 
         private static void WireGameManagerCardDetailOverlay(
@@ -517,6 +740,13 @@ namespace CardGame.CardBattle.Editor
         {
             var so = new SerializedObject(gm);
             so.FindProperty("cardDetailOverlay").objectReferenceValue = cardDetailOverlay;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void WireGameManagerHeroArena(GameManager gm, HeroArenaPresenter heroArenaPresenter)
+        {
+            var so = new SerializedObject(gm);
+            so.FindProperty("heroArenaPresenter").objectReferenceValue = heroArenaPresenter;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -583,6 +813,7 @@ namespace CardGame.CardBattle.Editor
             bridgeSo.FindProperty("gameManager").objectReferenceValue = gameManager;
             bridgeSo.FindProperty("audioAdapter").objectReferenceValue = audio;
             CardBattleBoardSetup.WireDefaultDecks(bridgeSo);
+            CardBattleHeroSetup.WireDefaultHeroes(bridgeSo);
             bridgeSo.ApplyModifiedPropertiesWithoutUndo();
 
             var bootSo = new SerializedObject(bootstrap);

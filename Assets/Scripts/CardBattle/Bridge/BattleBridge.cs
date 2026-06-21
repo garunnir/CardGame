@@ -13,6 +13,8 @@ namespace CardGame.CardBattle.Bridge
         [SerializeField] private GameManager gameManager;
         [SerializeField] private CardDataAsset[] defaultPlayerDeck = new CardDataAsset[6];
         [SerializeField] private CardDataAsset[] defaultEnemyDeck = new CardDataAsset[6];
+        [SerializeField] private HeroDataAsset defaultPlayerHero;
+        [SerializeField] private HeroDataAsset defaultEnemyHero;
         [SerializeField] private BattleAudioAdapter audioAdapter;
 
         private ICardDataLoader cardDataLoader;
@@ -66,14 +68,34 @@ namespace CardGame.CardBattle.Bridge
 
             var playerDeck = cardDataLoader.LoadDeck(playerIds);
             var enemyDeck = cardDataLoader.LoadDeck(enemyIds);
-            gameManager.InitializeBattle(playerDeck, enemyDeck);
+            gameManager.InitializeBattle(
+                playerDeck,
+                enemyDeck,
+                ResolveHero(defaultPlayerHero, "Player"),
+                ResolveHero(defaultEnemyHero, "Enemy"));
         }
 
         public void StartBattleFromDefaults()
         {
             var player = BuildDeck(defaultPlayerDeck, "Player");
             var enemy = BuildDeck(defaultEnemyDeck, "Enemy");
-            gameManager.InitializeBattle(player, enemy);
+            gameManager.InitializeBattle(
+                player,
+                enemy,
+                ResolveHero(defaultPlayerHero, "Player"),
+                ResolveHero(defaultEnemyHero, "Enemy"));
+        }
+
+        private HeroDataAsset ResolveHero(HeroDataAsset source, string teamPrefix)
+        {
+            if (source != null
+                && source.normalAttackBehavior != null
+                && source.shieldBehavior != null)
+            {
+                return source;
+            }
+
+            return RuntimeDeckFactory.CreateDefaultHero(teamPrefix);
         }
 
         private List<CardDataAsset> BuildDeck(CardDataAsset[] source, string teamPrefix)

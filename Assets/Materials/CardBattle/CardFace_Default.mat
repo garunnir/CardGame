@@ -49,8 +49,11 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnableExternalAlpha: 0
+    - _QuadAspect: 0.72727275
     - _QueueOffset: 0
     - _SampleGI: 0
+    - _SpriteAspect: 1
+    - _SpriteFit: 0
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Surface: 0

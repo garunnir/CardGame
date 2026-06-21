@@ -1,3 +1,4 @@
+using CardGame.CardBattle.Presentation;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -129,7 +130,7 @@ namespace CardGame.CardBattle.Input
         {
             if (lineImage != null && lineImage.sprite == null)
             {
-                lineImage.sprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
+                lineImage.sprite = UiImageDefaults.WhiteSprite;
             }
         }
 

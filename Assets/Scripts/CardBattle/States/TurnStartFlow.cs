@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Core;
+using CardGame.CardBattle.Presentation;
 using Cysharp.Threading.Tasks;
 
 namespace CardGame.CardBattle.States
@@ -24,13 +25,19 @@ namespace CardGame.CardBattle.States
             var healEvents = TurnStartHealEffect.Plan(battlefield);
             TurnStartHealEffect.Apply(healEvents);
 
+            var heroEvents = context.PlanHeroTurnStartEffects(isPlayerTurn);
+
             if (!context.IsStateGenerationCurrent(generation))
             {
                 return;
             }
 
             context.RaiseTurnBanner(isPlayerTurn);
-            await context.PlayTurnStartHealAsync(healEvents);
+
+            var unifiedEvents = new List<TurnStartEffectEvent>();
+            unifiedEvents.AddRange(TurnStartEffectAggregator.FromCardHealEvents(healEvents));
+            unifiedEvents.AddRange(TurnStartEffectAggregator.FromHeroSupportEvents(heroEvents));
+            await context.PlayTurnStartEffectsAsync(unifiedEvents);
         }
     }
 }

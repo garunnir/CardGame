@@ -59,7 +59,7 @@ namespace CardGame.CardBattle.Presentation
             List<CardModel> reserve,
             Transform fallback)
         {
-            if (IsInBattlefieldSlots(model, battlefield)
+            if (IsOnBattlefield(model, battlefield)
                 && zone.TryComputeBattlefieldPose(model, battlefield, out var localPosition, out var localRotation))
             {
                 return new AnchorPlacement(
@@ -88,7 +88,7 @@ namespace CardGame.CardBattle.Presentation
                 Quaternion.identity);
         }
 
-        private static bool IsInBattlefieldSlots(CardModel model, CardModel[] battlefield)
+        private static bool IsOnBattlefield(CardModel model, CardModel[] battlefield)
         {
             for (var i = 0; i < battlefield.Length; i++)
             {

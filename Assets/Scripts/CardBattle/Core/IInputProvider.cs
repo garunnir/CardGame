@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace CardGame.CardBattle.Core
 {
-    /// <summary>터치/클릭 입력 추상화 — 카드는 CardInstanceId로 식별.</summary>
+    /// <summary>터치/클릭 입력 추상화 — 카드·영웅 패널.</summary>
     public interface IInputProvider
     {
         event Action<CardInstanceId> CardSelected;
@@ -12,6 +12,8 @@ namespace CardGame.CardBattle.Core
         event Action<CardInstanceId, Vector2> CardDragStarted;
         event Action<CardInstanceId, CardInstanceId, Vector2> CardDragMoved;
         event Action<CardInstanceId, CardInstanceId, Vector2> CardDragEnded;
+        event Action<HeroInstanceId> HeroLongPressed;
+        event Action<HeroInstanceId> HeroLongPressReleased;
         bool IsEnabled { get; }
 
         void SetEnabled(bool enabled);

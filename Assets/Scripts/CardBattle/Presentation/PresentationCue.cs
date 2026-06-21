@@ -20,6 +20,11 @@ namespace CardGame.CardBattle.Presentation
         CameraShake,
         PlayHealOnTargetPresentation,
         PlayDeathPresentation,
+        PlayHeroStrikePresentation,
+        PlayHeroShieldBuffPresentation,
+        PlayHeroReceivedHitPresentation,
+        HeroStatTween,
+        PlayHeroSupportFromSlot,
     }
 
     public readonly struct PresentationCue
@@ -31,7 +36,14 @@ namespace CardGame.CardBattle.Presentation
             CardInstanceId subjectId = default,
             int hpFrom = -1,
             int hpTo = -1,
-            CardInstanceId sourceId = default)
+            CardInstanceId sourceId = default,
+            HeroInstanceId subjectHeroId = default,
+            HeroInstanceId sourceHeroId = default,
+            int shieldFrom = -1,
+            int shieldTo = -1,
+            int mpFrom = -1,
+            int mpTo = -1,
+            bool isMpGain = false)
         {
             Kind = kind;
             Duration = duration;
@@ -40,6 +52,13 @@ namespace CardGame.CardBattle.Presentation
             HpFrom = hpFrom;
             HpTo = hpTo;
             SourceId = sourceId;
+            SubjectHeroId = subjectHeroId;
+            SourceHeroId = sourceHeroId;
+            ShieldFrom = shieldFrom;
+            ShieldTo = shieldTo;
+            MpFrom = mpFrom;
+            MpTo = mpTo;
+            IsMpGain = isMpGain;
         }
 
         public PresentationCueKind Kind { get; }
@@ -49,5 +68,12 @@ namespace CardGame.CardBattle.Presentation
         public int HpFrom { get; }
         public int HpTo { get; }
         public CardInstanceId SourceId { get; }
+        public HeroInstanceId SubjectHeroId { get; }
+        public HeroInstanceId SourceHeroId { get; }
+        public int ShieldFrom { get; }
+        public int ShieldTo { get; }
+        public int MpFrom { get; }
+        public int MpTo { get; }
+        public bool IsMpGain { get; }
     }
 }

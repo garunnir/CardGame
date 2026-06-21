@@ -40,5 +40,8 @@ namespace CardGame.CardBattle.Cards
         [Tooltip("비어 있으면 Behavior SO → 코드 기본값 순.")]
         [TextArea(2, 6)]
         public string detailDescriptionOverride;
+
+        [BoxGroup("영웅 지원", centerLabel: true)]
+        public HeroSupportDefinition heroSupport;
     }
 }

@@ -47,6 +47,36 @@ namespace CardGame.CardBattle.Core
             return isPlayerTeam ? PlayerRemainingCount <= 0 : EnemyRemainingCount <= 0;
         }
 
+        public bool HasCardRemaining(bool isPlayerTeam)
+        {
+            return isPlayerTeam ? PlayerRemainingCount > 0 : EnemyRemainingCount > 0;
+        }
+
+        public bool IsCardPoolExhausted(bool isPlayerTeam)
+        {
+            return !HasCardRemaining(isPlayerTeam);
+        }
+
+        public bool CanTeamAttack(bool isPlayerTeam)
+        {
+            if (IsCardPoolExhausted(isPlayerTeam))
+            {
+                return false;
+            }
+
+            var battlefield = GetBattlefield(isPlayerTeam);
+            for (var i = 0; i < SlotCount; i++)
+            {
+                var card = battlefield[i];
+                if (card != null && card.IsAlive && IsTargetableOnBattlefield(card))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>해당 카드가 팀 전장 슬롯에 배치되어 있는지. 앞면 공개·타겟 가능 여부의 도메인 SSOT.</summary>
         public bool IsOnBattlefield(CardModel model)
         {

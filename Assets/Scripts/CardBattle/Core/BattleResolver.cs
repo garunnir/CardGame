@@ -8,10 +8,20 @@ namespace CardGame.CardBattle.Core
         {
             Attacker = attacker;
             Target = target;
+            HeroTarget = null;
+        }
+
+        public BattleActionRequest(CardModel attacker, HeroModel heroTarget)
+        {
+            Attacker = attacker;
+            Target = null;
+            HeroTarget = heroTarget;
         }
 
         public CardModel Attacker { get; }
         public CardModel Target { get; }
+        public HeroModel HeroTarget { get; }
+        public bool TargetsHero => HeroTarget != null;
     }
 
     public readonly struct BattleActionResult
@@ -22,9 +32,21 @@ namespace CardGame.CardBattle.Core
             int primaryDamage,
             int counterDamage,
             SecondaryStrikeResult secondary)
+            : this(attacker, primaryTarget, null, primaryDamage, counterDamage, secondary)
+        {
+        }
+
+        public BattleActionResult(
+            CardModel attacker,
+            CardModel primaryTarget,
+            HeroModel heroTarget,
+            int primaryDamage,
+            int counterDamage,
+            SecondaryStrikeResult secondary)
         {
             Attacker = attacker;
             PrimaryTarget = primaryTarget;
+            HeroTarget = heroTarget;
             PrimaryDamage = primaryDamage;
             CounterDamage = counterDamage;
             Secondary = secondary;
@@ -32,9 +54,11 @@ namespace CardGame.CardBattle.Core
 
         public CardModel Attacker { get; }
         public CardModel PrimaryTarget { get; }
+        public HeroModel HeroTarget { get; }
         public int PrimaryDamage { get; }
         public int CounterDamage { get; }
         public SecondaryStrikeResult Secondary { get; }
+        public bool TargetsHero => HeroTarget != null;
     }
 
     /// <summary>PDF 수식 그대로 공격/반격 연산.</summary>
@@ -54,7 +78,7 @@ namespace CardGame.CardBattle.Core
             return AttackModuleCollector.Plan(context);
         }
 
-        public static AttackOutcome PlanOutcome(BattleActionRequest request, CardModel[] enemyBattlefield)
+        public static AttackOutcome PlanCardOutcome(BattleActionRequest request, CardModel[] enemyBattlefield)
         {
             var attacker = request.Attacker;
             var target = request.Target;
@@ -95,6 +119,31 @@ namespace CardGame.CardBattle.Core
                 lethalTarget,
                 lethalAttacker,
                 lethalSecondary);
+        }
+
+        public static AttackOutcome PlanOutcome(BattleActionRequest request, CardModel[] enemyBattlefield)
+        {
+            return PlanCardOutcome(request, enemyBattlefield);
+        }
+
+        public static CardHeroAttackOutcome PlanHeroOutcome(BattleActionRequest request)
+        {
+            if (!request.TargetsHero)
+            {
+                return default;
+            }
+
+            return HeroCardAttackResolver.Plan(request.Attacker, request.HeroTarget);
+        }
+
+        public static BattleActionResult ApplyCardOutcome(AttackOutcome outcome, BattleActionRequest request)
+        {
+            return Apply(outcome.Resolution, request.Attacker, request.Target);
+        }
+
+        public static BattleActionResult ApplyHeroOutcome(CardHeroAttackOutcome outcome, BattleActionRequest request)
+        {
+            return HeroCardAttackResolver.Apply(outcome, request.Attacker, request.HeroTarget);
         }
 
         public static BattleActionResult Apply(AttackResolution resolution, CardModel attacker, CardModel target)

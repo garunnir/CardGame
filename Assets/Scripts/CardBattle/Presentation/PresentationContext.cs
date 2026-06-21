@@ -4,6 +4,7 @@ using CardGame.CardBattle.UI;
 
 namespace CardGame.CardBattle.Presentation
 {
+    /// <summary>레거시 PresentationContext → BattlePresentationSpec 변환.</summary>
     public sealed class PresentationContext
     {
         public PresentationContext(
@@ -46,6 +47,27 @@ namespace CardGame.CardBattle.Presentation
         public CardModel GetModel(CardInstanceId id)
         {
             return ViewRegistry != null && ViewRegistry.TryGetModel(id, out var model) ? model : null;
+        }
+
+        public static BattlePresentationSpec ToSpec(PresentationContext context, float tailDelay)
+        {
+            var unifiedSnapshot = PresentationSnapshot.FromCardAttack(context.Outcome, context.Request);
+            var spec = new BattlePresentationSpec(
+                PresentationKind.CardVsCard,
+                unifiedSnapshot,
+                context.ViewRegistry,
+                null,
+                context.Ui,
+                context.Presentation,
+                tailDelay)
+            {
+                AttackerCard = context.Attacker,
+                PrimaryTargetCard = context.Target,
+                CardBehavior = context.Behavior,
+                CardOutcome = context.Outcome,
+                ActionResult = context.ActionResult,
+            };
+            return spec;
         }
     }
 }

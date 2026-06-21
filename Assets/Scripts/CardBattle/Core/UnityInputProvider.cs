@@ -5,11 +5,13 @@ using UnityEngine;
 
 namespace CardGame.CardBattle.Core
 {
-    /// <summary>카드 클릭·드래그 입력 추상화.</summary>
+    /// <summary>카드·영웅 패널 클릭 입력 추상화.</summary>
     public sealed class UnityInputProvider : IInputProvider
     {
         private readonly List<ICardInputHost> boundHosts = new List<ICardInputHost>();
         private readonly HashSet<ICardInputHost> boundHostSet = new HashSet<ICardInputHost>();
+        private IHeroInputHost boundPlayerHeroHost;
+        private IHeroInputHost boundEnemyHeroHost;
 
         public event Action<CardInstanceId> CardSelected;
         public event Action<CardInstanceId> CardLongPressed;
@@ -17,6 +19,8 @@ namespace CardGame.CardBattle.Core
         public event Action<CardInstanceId, Vector2> CardDragStarted;
         public event Action<CardInstanceId, CardInstanceId, Vector2> CardDragMoved;
         public event Action<CardInstanceId, CardInstanceId, Vector2> CardDragEnded;
+        public event Action<HeroInstanceId> HeroLongPressed;
+        public event Action<HeroInstanceId> HeroLongPressReleased;
 
         public bool IsEnabled { get; private set; }
 
@@ -118,6 +122,42 @@ namespace CardGame.CardBattle.Core
             }
         }
 
+        public void BindHeroInputHosts(IHeroInputHost playerHeroHost, IHeroInputHost enemyHeroHost)
+        {
+            UnbindHeroHost(boundPlayerHeroHost);
+            UnbindHeroHost(boundEnemyHeroHost);
+
+            boundPlayerHeroHost = playerHeroHost;
+            boundEnemyHeroHost = enemyHeroHost;
+
+            BindHeroHost(boundPlayerHeroHost);
+            BindHeroHost(boundEnemyHeroHost);
+        }
+
+        private void BindHeroHost(IHeroInputHost host)
+        {
+            if (host == null)
+            {
+                return;
+            }
+
+            host.LongPressed += OnHeroHostLongPressed;
+            host.LongPressReleased += OnHeroHostLongPressReleased;
+            host.ShortClicked += OnHeroHostShortClicked;
+        }
+
+        private void UnbindHeroHost(IHeroInputHost host)
+        {
+            if (host == null)
+            {
+                return;
+            }
+
+            host.LongPressed -= OnHeroHostLongPressed;
+            host.LongPressReleased -= OnHeroHostLongPressReleased;
+            host.ShortClicked -= OnHeroHostShortClicked;
+        }
+
         private void UnbindHost(ICardInputHost host)
         {
             if (host == null)
@@ -185,6 +225,27 @@ namespace CardGame.CardBattle.Core
 
             var dropId = dropHost != null ? dropHost.InstanceId : default;
             NotifyCardDragEnded(source.InstanceId, dropId, pointerPosition);
+        }
+
+        private void OnHeroHostLongPressed(IHeroInputHost host)
+        {
+            if (host != null && host.InstanceId.IsValid)
+            {
+                HeroLongPressed?.Invoke(host.InstanceId);
+            }
+        }
+
+        private void OnHeroHostLongPressReleased(IHeroInputHost host)
+        {
+            if (host != null && host.InstanceId.IsValid)
+            {
+                HeroLongPressReleased?.Invoke(host.InstanceId);
+            }
+        }
+
+        private void OnHeroHostShortClicked(IHeroInputHost host)
+        {
+            // short click 타겟은 HeroArenaPresenter.ShortClickedDirect → GameManager.HeroTargetRequested
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
 using CardGame.CardBattle.Input;
+using CardGame.CardBattle.Presentation;
 using Cysharp.Threading.Tasks;
 
 namespace CardGame.CardBattle.Core
@@ -10,9 +11,12 @@ namespace CardGame.CardBattle.Core
     public interface IBattleContext
     {
         BattleField Field { get; }
+        HeroArenaField HeroArena { get; }
         IInputProvider InputProvider { get; }
         IReadOnlyList<CardDataAsset> PlayerDeckData { get; }
         IReadOnlyList<CardDataAsset> EnemyDeckData { get; }
+        HeroDataAsset PlayerHeroData { get; }
+        HeroDataAsset EnemyHeroData { get; }
 
         BattleActionRequest PendingAction { get; set; }
         bool IsPlayerTurn { get; set; }
@@ -22,6 +26,7 @@ namespace CardGame.CardBattle.Core
         DragTargetingPresenter DragTargetingPresenter { get; }
 
         Action<bool> OnBattleResult { get; set; }
+        event Action HeroTargetRequested;
 
         void ChangeState(BaseState nextState);
         bool IsStateGenerationCurrent(int generation);
@@ -31,11 +36,19 @@ namespace CardGame.CardBattle.Core
         UniTask<bool> ExecuteBattleAsync(BattleActionRequest request);
 
         void RaiseTurnBanner(bool isPlayerTurn);
+        void RaiseSkipBanner(string message);
         UniTask PlayTurnStartHealAsync(IReadOnlyList<TurnStartHealEvent> healEvents);
+        UniTask PlayHeroSupportEventsAsync(IReadOnlyList<HeroSupportHealEvent> events);
+        UniTask PlayTurnStartEffectsAsync(IReadOnlyList<TurnStartEffectEvent> events);
+        IReadOnlyList<HeroSupportHealEvent> PlanHeroTurnStartEffects(bool isPlayerTurn);
+        void SyncHeroViews();
+        void SetEnemyHeroTargetEnabled(bool enabled);
         void RaiseReserveChanged();
         void RaiseGameOver(bool playerWin);
+        void RequestHeroTarget();
 
         ICardBattleView FindView(CardInstanceId id);
         bool TryGetModel(CardInstanceId id, out CardModel model);
+        bool CanTargetEnemyHero(CardModel attacker);
     }
 }

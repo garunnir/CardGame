@@ -73,17 +73,37 @@ namespace CardGame.CardBattle.UI
                 turnBannerText.text = isPlayerTurn ? "플레이어 턴" : "적 턴";
             }
 
+            FadeBannerAsync(isPlayerTurn ? "플레이어 턴" : "적 턴").Forget();
+        }
+
+        public void ShowSkipBanner(string message)
+        {
+            FadeBannerAsync(string.IsNullOrEmpty(message) ? "턴 스킵" : message).Forget();
+        }
+
+        private async UniTaskVoid FadeBannerAsync(string text)
+        {
+            if (turnBannerText != null)
+            {
+                turnBannerText.text = text;
+            }
+
             if (turnBannerGroup != null)
             {
                 turnBannerGroup.alpha = 0f;
                 bannerFadeCts?.Cancel();
                 bannerFadeCts?.Dispose();
                 bannerFadeCts = new CancellationTokenSource();
-                FadeBannerAsync(bannerFadeCts.Token).Forget();
+                await FadeBannerInternalAsync(bannerFadeCts.Token);
             }
         }
 
         private async UniTaskVoid FadeBannerAsync(CancellationToken token)
+        {
+            await FadeBannerInternalAsync(token);
+        }
+
+        private async UniTask FadeBannerInternalAsync(CancellationToken token)
         {
             const float duration = 0.35f;
 

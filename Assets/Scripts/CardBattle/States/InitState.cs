@@ -20,8 +20,10 @@ namespace CardGame.CardBattle.States
         {
             var generation = Context.StateGeneration;
             Context.Field.Clear();
+            Context.HeroArena.Clear();
             Context.Field.DeployInitial(Context.PlayerDeckData, true);
             Context.Field.DeployInitial(Context.EnemyDeckData, false);
+            Context.HeroArena.DeployInitial(Context.PlayerHeroData, Context.EnemyHeroData);
             await Context.BuildBoardViewsAsync();
 
             if (!IsTransitionCurrent(generation))

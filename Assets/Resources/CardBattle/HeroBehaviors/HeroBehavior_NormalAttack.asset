@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 239c87d118ef8aa40b31c722b4702be8, type: 3}
+  m_Name: HeroBehavior_NormalAttack
+  m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Cards.HeroNormalAttackBehaviorAsset
+  behaviorId: herobehavior_normalattack
+  displayName: "\uD3C9\uD0C0"
+  description: "\uC601\uC6C5 \uAE30\uBCF8 \uACF5\uACA9"
+  counterDamageOverride: 0
+  presentation:
+    strikeSfx: {fileID: 0}
+    receivedHitSfx: {fileID: 0}
+    strikeVfxPrefab: {fileID: 0}
+    receivedHitVfxPrefab: {fileID: 0}
+    strikeDashDuration: 0.25
+    hitShakeStrength: 0.12
+    cameraShake: 0.12

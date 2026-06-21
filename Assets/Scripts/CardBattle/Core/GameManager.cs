@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CardGame.CardBattle.Bridge;
 using CardGame.CardBattle.Cards;
+using CardGame.CardBattle.Core;
 using CardGame.CardBattle.Input;
 using CardGame.CardBattle.Presentation;
 using CardGame.CardBattle.States;
@@ -18,6 +19,7 @@ namespace CardGame.CardBattle.Core
         [SerializeField] private DragTargetingPresenter dragTargetingPresenter;
         [SerializeField] private CardDetailOverlayPresenter cardDetailOverlay;
         [SerializeField] private CardBoardPresenter cardBoardPresenter;
+        [SerializeField] private HeroArenaPresenter heroArenaPresenter;
 
         private BaseState currentState;
         private int stateGeneration;
@@ -25,12 +27,18 @@ namespace CardGame.CardBattle.Core
         private CardPresentationService presentationService;
         private PresentationPlayer presentationPlayer;
         private BattleOrchestrator battleOrchestrator;
+        private readonly HeroStrikeController heroStrikeController = new HeroStrikeController();
+        private readonly BattleEffectBridge battleEffectBridge = new BattleEffectBridge();
         private CardInstanceId activeInspectCardId;
+        private HeroInstanceId activeInspectHeroId;
 
         public BattleField Field { get; } = new BattleField();
+        public HeroArenaField HeroArena { get; } = new HeroArenaField();
         public IInputProvider InputProvider => inputProvider;
         public List<CardDataAsset> PlayerDeckData { get; private set; } = new List<CardDataAsset>();
         public List<CardDataAsset> EnemyDeckData { get; private set; } = new List<CardDataAsset>();
+        public HeroDataAsset PlayerHeroData { get; private set; }
+        public HeroDataAsset EnemyHeroData { get; private set; }
 
         IReadOnlyList<CardDataAsset> IBattleContext.PlayerDeckData => PlayerDeckData;
         IReadOnlyList<CardDataAsset> IBattleContext.EnemyDeckData => EnemyDeckData;
@@ -41,6 +49,7 @@ namespace CardGame.CardBattle.Core
         public int StateGeneration => stateGeneration;
 
         public Action<bool> OnBattleResult { get; set; }
+        public event Action HeroTargetRequested;
         public DragTargetingPresenter DragTargetingPresenter => dragTargetingPresenter;
 
         private void Awake()
@@ -52,12 +61,18 @@ namespace CardGame.CardBattle.Core
 
             inputProvider.CardLongPressed += OnCardLongPressed;
             inputProvider.CardLongPressReleased += OnCardLongPressReleased;
+            inputProvider.HeroLongPressed += OnHeroLongPressed;
+            inputProvider.HeroLongPressReleased += OnHeroLongPressReleased;
+
+            ConfigureHeroInput();
         }
 
         private void OnDestroy()
         {
             inputProvider.CardLongPressed -= OnCardLongPressed;
             inputProvider.CardLongPressReleased -= OnCardLongPressReleased;
+            inputProvider.HeroLongPressed -= OnHeroLongPressed;
+            inputProvider.HeroLongPressReleased -= OnHeroLongPressReleased;
 
             if (cardBoardPresenter != null)
             {
@@ -79,47 +94,63 @@ namespace CardGame.CardBattle.Core
             }
         }
 
+        public void ConfigureHeroPresenter(HeroArenaPresenter presenter)
+        {
+            heroArenaPresenter = presenter;
+            ConfigureHeroInput();
+        }
+
+        private void ConfigureHeroInput()
+        {
+            if (heroArenaPresenter == null)
+            {
+                return;
+            }
+
+            heroArenaPresenter.BindEnemyHeroTarget(() => HeroTargetRequested?.Invoke());
+            RefreshHeroInput();
+        }
+
         public void ConfigurePresentation(BattleAudioAdapter audioAdapter)
         {
             presentationService = new CardPresentationService(audioAdapter);
             presentationPlayer = new PresentationPlayer();
-            battleOrchestrator = new BattleOrchestrator(
-                Field,
-                presentationPlayer,
-                presentationService,
-                ResolveAttackPresentationTailDelay());
+            battleOrchestrator = CreateOrchestrator();
         }
 
-        /// <summary>로비/외부 덱 데이터로 전투 시작.</summary>
-        public void InitializeBattle(List<CardDataAsset> playerDeck, List<CardDataAsset> enemyDeck)
+        public void InitializeBattle(
+            List<CardDataAsset> playerDeck,
+            List<CardDataAsset> enemyDeck,
+            HeroDataAsset playerHero = null,
+            HeroDataAsset enemyHero = null)
         {
-            HideCardDetailOverlay();
+            HideDetailOverlay();
             PlayerDeckData = SanitizeDeck(playerDeck, "Player");
             EnemyDeckData = SanitizeDeck(enemyDeck, "Enemy");
+            PlayerHeroData = SanitizeHero(playerHero, "Player");
+            EnemyHeroData = SanitizeHero(enemyHero, "Enemy");
             ChangeState(new InitState(this));
         }
 
         public void RestartBattle()
         {
-            InitializeBattle(PlayerDeckData, EnemyDeckData);
+            InitializeBattle(PlayerDeckData, EnemyDeckData, PlayerHeroData, EnemyHeroData);
         }
 
-        /// <summary>공격 연산 + 연출 + 사망/승패. true = 전투 계속.</summary>
         public async UniTask<bool> ExecuteBattleAsync(BattleActionRequest request)
         {
             if (battleOrchestrator == null)
             {
-                battleOrchestrator = new BattleOrchestrator(
-                    Field,
-                    presentationPlayer,
-                    presentationService,
-                    ResolveAttackPresentationTailDelay());
+                battleOrchestrator = CreateOrchestrator();
             }
 
             var result = await battleOrchestrator.ExecuteAsync(
                 request,
                 cardBoardPresenter,
-                uiManager);
+                uiManager,
+                heroArenaPresenter,
+                onHeroStrike: _ => { },
+                syncHeroViews: SyncHeroViews);
 
             if (cardBoardPresenter != null)
             {
@@ -127,6 +158,7 @@ namespace CardGame.CardBattle.Core
             }
 
             RaiseReserveChanged();
+            SetEnemyHeroTargetEnabled(false);
 
             if (!result.ContinueBattle)
             {
@@ -149,6 +181,7 @@ namespace CardGame.CardBattle.Core
 
         public UniTask BuildBoardViewsAsync()
         {
+            SyncHeroViews();
             if (cardBoardPresenter == null)
             {
                 return UniTask.CompletedTask;
@@ -173,7 +206,38 @@ namespace CardGame.CardBattle.Core
 
         public UniTask SyncAllViewsAsync()
         {
+            SyncHeroViews();
             return SyncBoardViewsAsync(animateRefill: false);
+        }
+
+        public void SyncHeroViews()
+        {
+            heroArenaPresenter?.Refresh(HeroArena, Field);
+            RefreshHeroInput();
+        }
+
+        public void SetEnemyHeroTargetEnabled(bool enabled)
+        {
+            heroArenaPresenter?.SetEnemyHeroTargetEnabled(enabled);
+        }
+
+        public bool CanTargetEnemyHero(CardModel attacker)
+        {
+            return CardTargetingRules.CanTargetEnemyHero(Field, HeroArena, attacker);
+        }
+
+        public void RequestHeroTarget()
+        {
+            HeroTargetRequested?.Invoke();
+        }
+
+        public IReadOnlyList<HeroSupportHealEvent> PlanHeroTurnStartEffects(bool isPlayerTurn)
+        {
+            return battleEffectBridge.PlanTurnStart(
+                HeroArena,
+                Field.PlayerBattlefield,
+                Field.EnemyBattlefield,
+                isPlayerTurn);
         }
 
         private async UniTask RunBoardPresentationAsync(UniTask boardTask, bool refreshInput)
@@ -185,6 +249,7 @@ namespace CardGame.CardBattle.Core
             }
 
             UpdateReserveUi();
+            SyncHeroViews();
         }
 
         private void RefreshBoardInput()
@@ -193,6 +258,19 @@ namespace CardGame.CardBattle.Core
             {
                 inputProvider.BindInputHosts(cardBoardPresenter.InputHosts);
             }
+        }
+
+        private void RefreshHeroInput()
+        {
+            if (heroArenaPresenter == null)
+            {
+                inputProvider.BindHeroInputHosts(null, null);
+                return;
+            }
+
+            inputProvider.BindHeroInputHosts(
+                heroArenaPresenter.PlayerHeroInputHost,
+                heroArenaPresenter.EnemyHeroInputHost);
         }
 
         private void UpdateReserveUi()
@@ -207,56 +285,102 @@ namespace CardGame.CardBattle.Core
             uiManager?.ShowTurnBanner(isPlayerTurn);
         }
 
+        public void RaiseSkipBanner(string message)
+        {
+            uiManager?.ShowSkipBanner(message);
+        }
+
         public void RaiseGameOver(bool playerWin)
         {
-            HideCardDetailOverlay();
+            HideDetailOverlay();
             uiManager?.ShowResultPopup(playerWin);
         }
 
         public void RaiseReserveChanged()
         {
             UpdateReserveUi();
+            SyncHeroViews();
         }
 
         public UniTask PlayTurnStartHealAsync(IReadOnlyList<TurnStartHealEvent> healEvents)
         {
-            if (healEvents == null || healEvents.Count == 0)
+            var events = TurnStartEffectAggregator.FromCardHealEvents(healEvents);
+            return PlayTurnStartEffectsAsync(events);
+        }
+
+        public UniTask PlayHeroSupportEventsAsync(IReadOnlyList<HeroSupportHealEvent> events)
+        {
+            var unified = TurnStartEffectAggregator.FromHeroSupportEvents(events);
+            return PlayTurnStartEffectsAsync(unified);
+        }
+
+        public UniTask PlayTurnStartEffectsAsync(IReadOnlyList<TurnStartEffectEvent> events)
+        {
+            if (events == null || events.Count == 0)
             {
                 return UniTask.CompletedTask;
             }
 
-            return PlayTurnStartPresentationAsync(healEvents);
+            return PlayTurnStartPresentationAsync(events);
         }
 
-        private async UniTask PlayTurnStartPresentationAsync(IReadOnlyList<TurnStartHealEvent> healEvents)
+        private async UniTask PlayTurnStartPresentationAsync(IReadOnlyList<TurnStartEffectEvent> events)
         {
             ICardViewRegistry viewRegistry = cardBoardPresenter;
             if (presentationPlayer == null)
             {
-                presentationService?.PlayHealFromEvents(healEvents, FindView);
-                SyncHealedTargets(healEvents);
+                presentationService?.PlayHealFromEvents(
+                    ExtractCardHealEvents(events),
+                    FindView);
+                SyncTurnStartTargets(events);
                 return;
             }
 
-            var sequence = PresentationSequenceBuilder.BuildTurnStartHeal(healEvents);
+            var sequence = PresentationSequenceBuilder.BuildTurnStartEffects(events);
             await presentationPlayer.PlayTurnStartAsync(
                 sequence,
                 uiManager,
                 presentationService,
-                viewRegistry);
-            SyncHealedTargets(healEvents);
+                viewRegistry,
+                heroArenaPresenter);
+            SyncTurnStartTargets(events);
         }
 
-        private void SyncHealedTargets(IReadOnlyList<TurnStartHealEvent> healEvents)
+        private static List<TurnStartHealEvent> ExtractCardHealEvents(IReadOnlyList<TurnStartEffectEvent> events)
+        {
+            var healEvents = new List<TurnStartHealEvent>();
+            for (var i = 0; i < events.Count; i++)
+            {
+                var effectEvent = events[i];
+                if (effectEvent.Kind != TurnStartStatKind.Heal
+                    || effectEvent.TargetCard == null
+                    || effectEvent.Source == null)
+                {
+                    continue;
+                }
+
+                healEvents.Add(new TurnStartHealEvent(
+                    effectEvent.Source,
+                    effectEvent.TargetCard,
+                    effectEvent.ToValue - effectEvent.FromValue,
+                    effectEvent.FromValue,
+                    effectEvent.ToValue));
+            }
+
+            return healEvents;
+        }
+
+        private void SyncTurnStartTargets(IReadOnlyList<TurnStartEffectEvent> events)
         {
             if (cardBoardPresenter == null)
             {
+                SyncHeroViews();
                 return;
             }
 
-            for (var i = 0; i < healEvents.Count; i++)
+            for (var i = 0; i < events.Count; i++)
             {
-                var target = healEvents[i].Target;
+                var target = events[i].TargetCard;
                 if (target == null)
                 {
                     continue;
@@ -267,6 +391,8 @@ namespace CardGame.CardBattle.Core
                     view.SetHpDisplay(target.CurrentHp);
                 }
             }
+
+            SyncHeroViews();
         }
 
         public ICardBattleView FindView(CardInstanceId id)
@@ -300,9 +426,9 @@ namespace CardGame.CardBattle.Core
 
             var layout = cardBoardPresenter != null ? cardBoardPresenter.Layout : null;
             var cardBack = layout != null ? layout.GetCardBack(model.IsPlayerTeam) : null;
-            var context = CardDetailContext.Build(model, phase, cardBack);
-            cardDetailOverlay?.Show(context);
+            ShowDetailOverlay(DetailOverlayContext.FromCardModel(model, phase, cardBack));
             activeInspectCardId = cardId;
+            activeInspectHeroId = default;
         }
 
         private void OnCardLongPressReleased(CardInstanceId cardId)
@@ -312,13 +438,71 @@ namespace CardGame.CardBattle.Core
                 return;
             }
 
-            HideCardDetailOverlay();
+            HideDetailOverlay();
         }
 
-        private void HideCardDetailOverlay()
+        private void OnHeroLongPressed(HeroInstanceId heroId)
+        {
+            var hero = ResolveHero(heroId);
+            if (hero == null)
+            {
+                return;
+            }
+
+            var field = hero.IsPlayerTeam ? Field.PlayerBattlefield : Field.EnemyBattlefield;
+            ShowDetailOverlay(DetailOverlayContext.FromHero(hero, field));
+            activeInspectHeroId = heroId;
+            activeInspectCardId = default;
+        }
+
+        private void OnHeroLongPressReleased(HeroInstanceId heroId)
+        {
+            if (!activeInspectHeroId.IsValid || activeInspectHeroId != heroId)
+            {
+                return;
+            }
+
+            HideDetailOverlay();
+        }
+
+        private HeroModel ResolveHero(HeroInstanceId heroId)
+        {
+            if (HeroArena.PlayerHero != null && HeroArena.PlayerHero.InstanceId == heroId)
+            {
+                return HeroArena.PlayerHero;
+            }
+
+            if (HeroArena.EnemyHero != null && HeroArena.EnemyHero.InstanceId == heroId)
+            {
+                return HeroArena.EnemyHero;
+            }
+
+            return heroArenaPresenter?.FindHero(heroId);
+        }
+
+        private void ShowDetailOverlay(DetailOverlayContext context)
+        {
+            cardDetailOverlay?.Show(context);
+        }
+
+        private void HideDetailOverlay()
         {
             cardDetailOverlay?.Hide();
             activeInspectCardId = default;
+            activeInspectHeroId = default;
+        }
+
+        private void HideCardDetailOverlay() => HideDetailOverlay();
+
+        private BattleOrchestrator CreateOrchestrator()
+        {
+            return new BattleOrchestrator(
+                Field,
+                HeroArena,
+                heroStrikeController,
+                presentationPlayer,
+                presentationService,
+                ResolveAttackPresentationTailDelay());
         }
 
         private float ResolveAttackPresentationTailDelay()
@@ -336,6 +520,19 @@ namespace CardGame.CardBattle.Core
 
             Debug.LogWarning($"[CardBattle] {teamPrefix} 덱이 유효하지 않아 런타임 기본 덱으로 대체합니다.");
             return RuntimeDeckFactory.CreateDefaultDeck(teamPrefix);
+        }
+
+        private static HeroDataAsset SanitizeHero(HeroDataAsset hero, string teamPrefix)
+        {
+            if (hero != null
+                && hero.normalAttackBehavior != null
+                && hero.shieldBehavior != null)
+            {
+                return hero;
+            }
+
+            Debug.LogWarning($"[CardBattle] {teamPrefix} 영웅 데이터가 없어 런타임 기본 영웅으로 대체합니다.");
+            return RuntimeDeckFactory.CreateDefaultHero(teamPrefix);
         }
     }
 }

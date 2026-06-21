@@ -22,25 +22,21 @@ namespace CardGame.CardBattle.AI
 
             var score = 0f;
 
-            // 힐러 최우선
             if (target.CardType == CardType.Healer)
             {
                 score += HealerPriorityBonus;
             }
 
-            // 고위험(HP=공격력) 타겟
             score += target.CurrentHp * 10f + HighHpThreatBonus;
 
             var preview = AttackModuleCollector.PlanForAiPreview(
                 new AttackContext(attacker, target, null, attacker.Behavior));
 
-            // 저HP 공격자 — 반격 없는 원거리 우선
             if (attacker.CurrentHp <= 2 && target.CardType == CardType.Ranged)
             {
                 score += SafeRangedBonus;
             }
 
-            // 길동무: HP 1이면 반격 불가 타겟 또는 일격 처형
             if (attacker.CurrentHp <= 1)
             {
                 if (target.CardType == CardType.Ranged)
@@ -54,7 +50,6 @@ namespace CardGame.CardBattle.AI
                 }
             }
 
-            // 반격으로 죽는 경우 원거리/저HP 대상 가산
             if (preview.CounterDamage > 0
                 && preview.CounterDamage >= attacker.CurrentHp
                 && target.CardType == CardType.Ranged)
@@ -90,16 +85,36 @@ namespace CardGame.CardBattle.AI
         }
 
         public static List<BattleActionRequest> BuildTurnActions(
+            BattleField field,
+            HeroArenaField heroArena,
             CardModel[] enemyBattlefield,
             CardModel[] playerBattlefield)
         {
             var list = new List<BattleActionRequest>();
+            if (field == null)
+            {
+                return list;
+            }
+
+            if (!field.CanTeamAttack(false))
+            {
+                return list;
+            }
+
+            var playerCardsExhausted = field.IsCardPoolExhausted(true);
 
             for (var i = 0; i < enemyBattlefield.Length; i++)
             {
                 var attacker = enemyBattlefield[i];
                 if (attacker == null || !attacker.IsAlive)
                 {
+                    continue;
+                }
+
+                if (playerCardsExhausted
+                    && CardTargetingRules.CanTargetPlayerHero(field, heroArena, attacker))
+                {
+                    list.Add(new BattleActionRequest(attacker, heroArena.PlayerHero));
                     continue;
                 }
 

@@ -17,3 +17,11 @@ MonoBehaviour:
   maxHp: 5
   illustration: {fileID: 21300000, guid: 5d81e5f901c965b4db3aeead919aa5dc, type: 3}
   behavior: {fileID: 11400000, guid: b1c2d3e4f5a6478990abcdef12345602, type: 2}
+  detailTypeLabelOverride: 
+  detailDescriptionOverride: 
+  heroSupport:
+    strikeBonus: 0
+    turnStartHeroHeal: 0
+    mpGainOnTurnStart: 15
+    mpGainOnHeroStrike: 5
+    defenseBonus: 0

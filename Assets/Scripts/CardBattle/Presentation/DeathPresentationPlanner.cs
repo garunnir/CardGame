@@ -1,20 +1,19 @@
 using System.Collections.Generic;
 using CardGame.CardBattle.Cards;
-using CardGame.CardBattle.Core;
 
 namespace CardGame.CardBattle.Presentation
 {
     /// <summary>공격 연출 종료 시점에 재생할 사망 큐 — refill 전에 순서대로 삽입.</summary>
     internal static class DeathPresentationPlanner
     {
-        public static void AppendDeathCues(PresentationContext context, IList<PresentationCue> cues)
+        public static void AppendDeathCues(BattlePresentationSpec spec, IList<PresentationCue> cues)
         {
-            if (context == null || cues == null)
+            if (spec == null || cues == null || spec.Kind != PresentationKind.CardVsCard)
             {
                 return;
             }
 
-            var outcome = context.Outcome;
+            var outcome = spec.CardOutcome;
 
             if (outcome.LethalTarget != null)
             {

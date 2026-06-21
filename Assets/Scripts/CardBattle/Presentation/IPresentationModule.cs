@@ -4,7 +4,7 @@ namespace CardGame.CardBattle.Presentation
 {
     public interface IPresentationModule
     {
-        void CollectCues(PresentationContext context, IList<PresentationCue> cues);
+        void CollectCues(BattlePresentationSpec spec, IList<PresentationCue> cues);
     }
 
     public interface IPresentationModuleCollector

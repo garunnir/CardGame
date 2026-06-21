@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: BattleLayout_Default
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Core.BattleLayoutConfig
   cardEntityPrefab: {fileID: 7466450774291910894, guid: f21ebd5188f5a7345835a502eb548b0b, type: 3}
+  heroEntityPrefab: {fileID: 988924338635749741, guid: ad7c0ba51422a594f82063106ae3ea1c, type: 3}
   playerCardBack: {fileID: 21300000, guid: 36d38ffd6ad2f7d43973c2b3725e8424, type: 3}
   enemyCardBack: {fileID: 21300000, guid: 8fcf58c671aae0648b5087b33bb958c0, type: 3}
   deployMoveDuration: 0.45
