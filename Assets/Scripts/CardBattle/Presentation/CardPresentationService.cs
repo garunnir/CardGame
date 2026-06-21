@@ -53,7 +53,7 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            PlayClipOnTarget(presentation.impactSfx, presentation.impactVfxPrefab, targetView);
+            PlayClipAt(presentation.impactSfx, presentation.impactVfxPrefab, targetView?.ViewTransform);
         }
 
         public UniTask ShowStatFloatingTextAsync(
@@ -105,20 +105,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            switch (attacker.Behavior)
-            {
-                case NormalBehaviorAsset normal:
-                    PlayAttackClip(normal.presentation.attackSfx, normal.presentation.attackVfxPrefab, attackerView);
-                    break;
-                case RangedBehaviorAsset:
-                    break;
-                case MusouBehaviorAsset musou:
-                    PlayAttackClip(musou.presentation.attackSfx, musou.presentation.attackVfxPrefab, attackerView);
-                    break;
-                case HealerBehaviorAsset healer:
-                    PlayAttackClip(healer.presentation.attackSfx, healer.presentation.attackVfxPrefab, attackerView);
-                    break;
-            }
+            BehaviorPresentationClipResolver.ResolveAttack(attacker.Behavior, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, attackerView?.ViewTransform);
         }
 
         /// <summary>공격자 SO 명중 → 타겟 앵커.</summary>
@@ -129,8 +117,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            BehaviorPresentationClips.ResolveOnHit(attacker.Behavior, out var sfx, out var vfx);
-            PlayClip(sfx, vfx, targetView);
+            BehaviorPresentationClipResolver.ResolveOnHit(attacker.Behavior, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, targetView?.ViewTransform);
         }
 
         /// <summary>피해자 SO 피격 → 피해자 앵커.</summary>
@@ -141,8 +129,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            BehaviorPresentationClips.ResolveReceivedHit(victim.Behavior, out var sfx, out var vfx);
-            PlayClip(sfx, vfx, victimView);
+            BehaviorPresentationClipResolver.ResolveReceivedHit(victim.Behavior, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, victimView?.ViewTransform);
         }
 
         /// <summary>방어자 SO 명중(반격) → 공격자 앵커.</summary>
@@ -159,8 +147,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            BehaviorPresentationClips.ResolveMusouSecondaryOnHit(musou, out var sfx, out var vfx);
-            PlayClip(sfx, vfx, targetView);
+            BehaviorPresentationClipResolver.ResolveMusouSecondaryOnHit(musou, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, targetView?.ViewTransform);
         }
 
         public float GetMusouSecondaryCameraShake(CardModel attacker)
@@ -180,8 +168,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            BehaviorPresentationClips.ResolveDeath(card.Behavior, out var sfx, out var vfx);
-            PlayClip(sfx, vfx, view);
+            BehaviorPresentationClipResolver.ResolveDeath(card.Behavior, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, view?.ViewTransform);
         }
 
         public void PlayOnHitToHero(CardModel attacker, IPresentationTargetView heroView)
@@ -191,8 +179,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            BehaviorPresentationClips.ResolveOnHit(attacker.Behavior, out var sfx, out var vfx);
-            PlayClipOnTarget(sfx, vfx, heroView);
+            BehaviorPresentationClipResolver.ResolveOnHit(attacker.Behavior, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, heroView?.ViewTransform);
         }
 
         public void PlayHeroReceivedHit(HeroModel hero, IPresentationTargetView heroView)
@@ -202,15 +190,8 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            AudioClip sfx = null;
-            GameObject vfx = null;
-            if (hero.NormalAttackBehavior != null)
-            {
-                sfx = hero.NormalAttackBehavior.presentation.receivedHitSfx;
-                vfx = hero.NormalAttackBehavior.presentation.receivedHitVfxPrefab;
-            }
-
-            PlayClipOnTarget(sfx, vfx, heroView);
+            HeroPresentationClipResolver.ResolveReceivedHit(hero, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, heroView?.ViewTransform);
         }
 
         public void PlayHeroCounterOnHit(HeroModel defender, ICardBattleView attackerView)
@@ -220,26 +201,14 @@ namespace CardGame.CardBattle.Presentation
 
         public void PlayHeroStrike(HeroModel striker, IPresentationTargetView strikerView)
         {
-            if (striker?.NormalAttackBehavior == null)
-            {
-                return;
-            }
-
-            var presentation = striker.NormalAttackBehavior.presentation;
-            audio?.PlaySfx(presentation.strikeSfx);
-            SpawnVfxOnTarget(presentation.strikeVfxPrefab, strikerView);
+            HeroPresentationClipResolver.ResolveStrike(striker, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, strikerView?.ViewTransform);
         }
 
         public void PlayHeroShieldBuff(HeroModel striker, IPresentationTargetView strikerView, float bloomIntensity)
         {
-            if (striker?.ShieldBehavior == null)
-            {
-                return;
-            }
-
-            var presentation = striker.ShieldBehavior.presentation;
-            audio?.PlaySfx(presentation.shieldBuffSfx);
-            SpawnVfxOnTarget(presentation.shieldBuffVfxPrefab, strikerView);
+            HeroPresentationClipResolver.ResolveShieldBuff(striker, out var sfx, out var vfx);
+            PlayClipAt(sfx, vfx, strikerView?.ViewTransform);
         }
 
         public void PlayMpGainStub()
@@ -266,27 +235,10 @@ namespace CardGame.CardBattle.Presentation
             return null;
         }
 
-        private void PlayClipOnTarget(AudioClip clip, GameObject vfxPrefab, IPresentationTargetView view)
+        private void PlayClipAt(AudioClip clip, GameObject vfxPrefab, Transform anchor)
         {
             audio?.PlaySfx(clip);
-            SpawnVfxAtTarget(vfxPrefab, view?.ViewTransform);
-        }
-
-        private void PlayAttackClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
-        {
-            audio?.PlaySfx(clip);
-            SpawnVfxAtTarget(vfxPrefab, view?.ViewTransform);
-        }
-
-        private void PlayClip(AudioClip clip, GameObject vfxPrefab, ICardBattleView view)
-        {
-            audio?.PlaySfx(clip);
-            SpawnVfxAtTarget(vfxPrefab, view?.ViewTransform);
-        }
-
-        private static void SpawnVfxOnTarget(GameObject prefab, IPresentationTargetView view)
-        {
-            SpawnVfxAtTarget(prefab, view?.ViewTransform);
+            SpawnVfxAtTarget(vfxPrefab, anchor);
         }
 
         private static void SpawnVfxAtTarget(GameObject prefab, Transform anchor)
@@ -296,120 +248,13 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var instance = UnityEngine.Object.Instantiate(prefab, anchor.position, anchor.rotation);
+            var instance = PresentationVfxSpawn.InstantiateAt(prefab, anchor);
+            if (instance == null)
+            {
+                return;
+            }
+
             UnityEngine.Object.Destroy(instance, DefaultVfxLifetime);
-        }
-    }
-
-    internal static class BehaviorPresentationClips
-    {
-        public static void ResolveOnHit(CardBehaviorAsset behavior, out AudioClip sfx, out GameObject vfx)
-        {
-            sfx = null;
-            vfx = null;
-            if (behavior == null)
-            {
-                return;
-            }
-
-            switch (behavior)
-            {
-                case NormalBehaviorAsset normal:
-                    sfx = normal.presentation.hitSfx;
-                    vfx = CardPresentationDefaults.ResolveOnHitVfx(normal.presentation.hitVfxPrefab);
-                    break;
-                case RangedBehaviorAsset:
-                    break;
-                case MusouBehaviorAsset musou:
-                    sfx = musou.presentation.hitSfx;
-                    vfx = CardPresentationDefaults.ResolveOnHitVfx(musou.presentation.hitVfxPrefab);
-                    break;
-                case HealerBehaviorAsset healer:
-                    sfx = healer.presentation.hitSfx;
-                    vfx = CardPresentationDefaults.ResolveOnHitVfx(healer.presentation.hitVfxPrefab);
-                    break;
-            }
-        }
-
-        public static void ResolveReceivedHit(CardBehaviorAsset behavior, out AudioClip sfx, out GameObject vfx)
-        {
-            sfx = null;
-            vfx = null;
-            if (behavior == null)
-            {
-                return;
-            }
-
-            switch (behavior)
-            {
-                case NormalBehaviorAsset normal:
-                    sfx = normal.presentation.receivedHitSfx;
-                    vfx = CardPresentationDefaults.ResolveReceivedHitVfx(normal.presentation.receivedHitVfxPrefab);
-                    break;
-                case RangedBehaviorAsset ranged:
-                    sfx = ranged.presentation.receivedHitSfx;
-                    vfx = CardPresentationDefaults.ResolveReceivedHitVfx(ranged.presentation.receivedHitVfxPrefab);
-                    break;
-                case MusouBehaviorAsset musou:
-                    sfx = musou.presentation.receivedHitSfx;
-                    vfx = CardPresentationDefaults.ResolveReceivedHitVfx(musou.presentation.receivedHitVfxPrefab);
-                    break;
-                case HealerBehaviorAsset healer:
-                    sfx = healer.presentation.receivedHitSfx;
-                    vfx = CardPresentationDefaults.ResolveReceivedHitVfx(healer.presentation.receivedHitVfxPrefab);
-                    break;
-            }
-        }
-
-        public static void ResolveMusouSecondaryOnHit(MusouBehaviorAsset musou, out AudioClip sfx, out GameObject vfx)
-        {
-            sfx = null;
-            vfx = null;
-            if (musou == null)
-            {
-                return;
-            }
-
-            sfx = musou.presentation.secondaryHitSfx;
-            vfx = CardPresentationDefaults.ResolveOnHitVfx(musou.presentation.secondaryHitVfxPrefab);
-        }
-
-        public static void ResolveDeath(CardBehaviorAsset behavior, out AudioClip sfx, out GameObject vfx)
-        {
-            sfx = null;
-            vfx = null;
-            if (behavior == null)
-            {
-                return;
-            }
-
-            switch (behavior)
-            {
-                case NormalBehaviorAsset normal:
-                    sfx = normal.presentation.deathSfx;
-                    vfx = CardPresentationDefaults.ResolveDeathVfx(
-                        normal.presentation.deathVfxPrefab,
-                        normal.presentation.receivedHitVfxPrefab);
-                    break;
-                case RangedBehaviorAsset ranged:
-                    sfx = ranged.presentation.deathSfx;
-                    vfx = CardPresentationDefaults.ResolveDeathVfx(
-                        ranged.presentation.deathVfxPrefab,
-                        ranged.presentation.receivedHitVfxPrefab);
-                    break;
-                case MusouBehaviorAsset musou:
-                    sfx = musou.presentation.deathSfx;
-                    vfx = CardPresentationDefaults.ResolveDeathVfx(
-                        musou.presentation.deathVfxPrefab,
-                        musou.presentation.receivedHitVfxPrefab);
-                    break;
-                case HealerBehaviorAsset healer:
-                    sfx = healer.presentation.deathSfx;
-                    vfx = CardPresentationDefaults.ResolveDeathVfx(
-                        healer.presentation.deathVfxPrefab,
-                        healer.presentation.receivedHitVfxPrefab);
-                    break;
-            }
         }
     }
 }

@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace CardGame.CardBattle.Cards
 {
     /// <summary>영웅 3D 카드 렌더 순서 — 바는 초상 뒤, 라벨은 앞.</summary>
@@ -12,5 +14,8 @@ namespace CardGame.CardBattle.Cards
         public const int NameLabel = 6;
         public const int StatLabel = 7;
         public const int FloatingText = 10;
+        public const int BattleVfx = 12;
+
+        public static readonly Vector3 BattleVfxOffsetLocal = new Vector3(0f, 0f, -2f);
     }
 }

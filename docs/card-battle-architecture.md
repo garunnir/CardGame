@@ -147,6 +147,27 @@ CardBoardPlacement.ResolvePlacement  →  AnchorPlacement (parent, local pose)
 
 ---
 
+## Presentation 연출 (2026-06)
+
+```
+PresentationModuleFactory / TurnStartPresentationPlanner
+  → PresentationSequence (cues)
+  → PresentationPlayer
+  → PresentationCueDispatcher → IPresentationCueHandler (kind별)
+  → CardPresentationService / PresentationCueMotionBridge / BattleStatFloatingTextPresenter
+```
+
+| 구성요소 | 역할 |
+|----------|------|
+| `PresentationCueContext` | battle / turn-start 실행 컨텍스트·타겟 해석 |
+| `PresentationCueHandlers` | cue kind별 Command handler + Dispatcher |
+| `BehaviorPresentationClipResolver` | CardBehavior SO → SFX/VFX (Strategy) |
+| `HeroPresentationClipResolver` | HeroBehavior SO → SFX/VFX |
+| `PresentationStatFeedback` | damage/heal floating text cue helper |
+| `BattleStatFloatingTextPool` | TMP floating text 오브젝트 풀 |
+
+---
+
 ## 리팩터링 현황 (2025-06 감사 · 2026-06 갱신)
 
 ### 완료된 항목
@@ -171,6 +192,10 @@ CardBoardPlacement.ResolvePlacement  →  AnchorPlacement (parent, local pose)
 - `UIManager` 턴 배너 fade Coroutine → UniTask
 - 초기 스폰: 전 카드 덱 스택 배치 후 전장 3장 순차 deploy
 - 카드 면: `CardFace_Default` 불투명·`Cull Back` (양면 스프라이트 머티리얼 제거)
+- **Presentation cue Command 패턴** — `PresentationCueDispatcher` + handler per kind
+- **Clip resolver 분리** — `BehaviorPresentationClipResolver`, `HeroPresentationClipResolver`
+- **Stat floating text** — `BattleStatFloatingTextPresenter` + pool, turn heal cue helper
+- **CardPresentationService** — `PlayClipAt` 단일 재생 경로
 
 ### 남은 항목 (선택)
 
@@ -197,7 +222,10 @@ Assets/Scripts/CardBattle/
 │   └── ICardMotionHost.cs (internal)
 ├── Core/            # Field, FSM hub, resolver, orchestrator, layout SO
 ├── Input/           # Drag line, contracts
-├── Presentation/    # Board, player, cues, modules
+├── Presentation/    # Board, player, cues, modules, cue handlers, clip resolvers
+│   ├── PresentationCueDispatcher / PresentationCueHandlers.cs
+│   ├── BehaviorPresentationClipResolver.cs
+│   ├── BattleStatFloatingTextPresenter.cs / BattleStatFloatingTextPool.cs
 │   ├── CardBoardPresenter.cs      # lock·오케스트레이션
 │   ├── CardBoardEntityRegistry.cs
 │   ├── CardBoardTeamOps.cs        # spawn/sync

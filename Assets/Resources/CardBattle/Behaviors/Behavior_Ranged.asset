@@ -20,7 +20,7 @@ MonoBehaviour:
   primaryDamageMultiplier: 1
   attackProjectilePresentation: {fileID: 11400000, guid: 395e03b37abaec74caad9d994fcd3a39, type: 2}
   presentation:
-    receivedHitSfx: {fileID: 0}
+    receivedHitSfx: {fileID: 8300000, guid: d46323e22e74e46baa241cbf48c85671, type: 3}
     deathSfx: {fileID: 8300000, guid: 7bef0064f8567430cac22499c6b93d4f, type: 3}
     receivedHitVfxPrefab: {fileID: 4021103657954561961, guid: 5599af40cfd6e44469a1c7820aaf360d, type: 3}
     deathVfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}

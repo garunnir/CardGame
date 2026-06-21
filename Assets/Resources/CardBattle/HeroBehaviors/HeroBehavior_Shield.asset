@@ -17,6 +17,6 @@ MonoBehaviour:
   description: "MP \uB9CC\uB545 \uC2DC \uBCF4\uD638\uB9C9 \uD569\uC0B0"
   shieldAmount: 5
   presentation:
-    shieldBuffSfx: {fileID: 0}
+    shieldBuffSfx: {fileID: 8300000, guid: 0c008ee3ee72a4362a35be25fa5de043, type: 3}
     shieldBuffVfxPrefab: {fileID: 4772634663576830964, guid: e1385af346f4e624eb313ec1ea4fcd7e, type: 3}
     buffBloomIntensity: 0.15

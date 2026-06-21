@@ -25,7 +25,12 @@ namespace CardGame.CardBattle.Presentation
             }
 
             var flightDuration = duration > 0f ? duration : MinDuration;
-            var instance = Object.Instantiate(prefab, from.position, from.rotation);
+            var instance = PresentationVfxSpawn.InstantiateAt(prefab, from);
+            if (instance == null)
+            {
+                return;
+            }
+
             var transform = instance.transform;
 
             try

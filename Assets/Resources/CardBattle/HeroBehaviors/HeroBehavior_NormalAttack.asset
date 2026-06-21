@@ -17,10 +17,10 @@ MonoBehaviour:
   description: "\uC601\uC6C5 \uAE30\uBCF8 \uACF5\uACA9"
   counterDamageOverride: 0
   presentation:
-    strikeSfx: {fileID: 8300000, guid: 7bef0064f8567430cac22499c6b93d4f, type: 3}
-    receivedHitSfx: {fileID: 8300000, guid: fe0b1f9aeb45b41b089175aeeabd5d95, type: 3}
-    strikeVfxPrefab: {fileID: 2433282508537954060, guid: 3ef3ae421f71c5c4e97fe12dc2fc6312, type: 3}
+    strikeSfx: {fileID: 8300000, guid: fe0b1f9aeb45b41b089175aeeabd5d95, type: 3}
+    receivedHitSfx: {fileID: 8300000, guid: 7bef0064f8567430cac22499c6b93d4f, type: 3}
+    strikeVfxPrefab: {fileID: 5339739117810204693, guid: 26e1cb216e3635e4a820f58a1118d6b9, type: 3}
     receivedHitVfxPrefab: {fileID: 4021103657954561961, guid: 5c755f9bc5253ea418e919994537dcc7, type: 3}
-    strikeDashDuration: 0.25
+    strikeDashDuration: 0.5
     hitShakeStrength: 0.12
     cameraShake: 0.12

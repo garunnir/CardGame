@@ -15,6 +15,12 @@ namespace CardGame.CardBattle.Cards
         public const int NameLabelSortingOrder = 2;
         public const int HpLabelSortingOrder = 3;
         public const int FloatingTextSortingOrder = 8;
+        public const int BattleVfxSortingOrder = 12;
+
+        /// <summary>명중 VFX 스폰 — 카드 로컬 Y+ (중심 위쪽).</summary>
+        public static readonly Vector3 BattleVfxOffsetLocal = new Vector3(0f, 0f, -2f);
+
+        public const float BattleVfxFaceForwardOffset = 0.025f;
 
         private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
         private static readonly int MainTexStId = Shader.PropertyToID("_MainTex_ST");

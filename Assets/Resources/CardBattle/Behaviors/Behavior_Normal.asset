@@ -20,9 +20,9 @@ MonoBehaviour:
   primaryDamageMultiplier: 1
   receivesCounterAttack: 1
   presentation:
-    attackSfx: {fileID: 8300000, guid: fe0b1f9aeb45b41b089175aeeabd5d95, type: 3}
+    attackSfx: {fileID: 0}
     hitSfx: {fileID: 8300000, guid: d46323e22e74e46baa241cbf48c85671, type: 3}
-    receivedHitSfx: {fileID: 0}
+    receivedHitSfx: {fileID: 8300000, guid: fe0b1f9aeb45b41b089175aeeabd5d95, type: 3}
     counterSfx: {fileID: 0}
     deathSfx: {fileID: 8300000, guid: 7bef0064f8567430cac22499c6b93d4f, type: 3}
     attackVfxPrefab: {fileID: 904662820145583817, guid: 019faff12646bd8438ea56e8e7861fd8, type: 3}

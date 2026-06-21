@@ -86,11 +86,7 @@ namespace CardGame.CardBattle.Presentation
 
                 if (input.FromValue >= 0 && input.ToValue >= 0)
                 {
-                    cues.Add(new PresentationCue(
-                        PresentationCueKind.PlayStatFloatingText,
-                        subjectId: input.TargetCardId,
-                        statFeedbackKind: StatFeedbackKind.Heal,
-                        statAmount: input.Delta));
+                    PresentationStatFeedback.AppendHealFloatingText(cues, input.TargetCardId, input.Delta);
 
                     cues.Add(new PresentationCue(
                         PresentationCueKind.HpBarTween,
@@ -115,11 +111,7 @@ namespace CardGame.CardBattle.Presentation
 
             if (input.FromValue >= 0 && input.ToValue >= 0)
             {
-                cues.Add(new PresentationCue(
-                    PresentationCueKind.PlayStatFloatingText,
-                    subjectHeroId: input.TargetHeroId,
-                    statFeedbackKind: StatFeedbackKind.Heal,
-                    statAmount: input.Delta));
+                PresentationStatFeedback.AppendHealFloatingText(cues, input.TargetHeroId, input.Delta);
 
                 cues.Add(new PresentationCue(
                     PresentationCueKind.HeroStatTween,

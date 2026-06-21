@@ -37,13 +37,14 @@ namespace CardGame.CardBattle.Presentation
                 return;
             }
 
-            var go = new GameObject("BattleStatFloat");
+            var pool = BattleStatFloatingTextPool.Shared;
+            var entry = pool.Rent();
+            var go = entry.Root;
+            var text = entry.Text;
             go.transform.SetPositionAndRotation(spawnPosition, rotation);
 
-            var text = go.AddComponent<TextMeshPro>();
             text.text = label;
             text.fontSize = settings.fontSize;
-            text.alignment = TextAlignmentOptions.Center;
             text.color = color;
             ConfigureTextRenderer(text, settings, targetRoot);
 
@@ -67,10 +68,7 @@ namespace CardGame.CardBattle.Presentation
             }
             finally
             {
-                if (go != null)
-                {
-                    Object.Destroy(go);
-                }
+                pool.Return(entry);
             }
         }
 

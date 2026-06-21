@@ -31,6 +31,32 @@ namespace CardGame.CardBattle.Presentation
             AppendFloatingText(cues, StatFeedbackKind.Damage, damage, subjectHeroId: subjectHeroId);
         }
 
+        public static void AppendHealFloatingText(
+            IList<PresentationCue> cues,
+            CardInstanceId subjectId,
+            int healAmount)
+        {
+            if (cues == null || healAmount <= 0 || !subjectId.IsValid)
+            {
+                return;
+            }
+
+            AppendFloatingText(cues, StatFeedbackKind.Heal, healAmount, subjectId: subjectId);
+        }
+
+        public static void AppendHealFloatingText(
+            IList<PresentationCue> cues,
+            HeroInstanceId subjectHeroId,
+            int healAmount)
+        {
+            if (cues == null || healAmount <= 0 || !subjectHeroId.IsValid)
+            {
+                return;
+            }
+
+            AppendFloatingText(cues, StatFeedbackKind.Heal, healAmount, subjectHeroId: subjectHeroId);
+        }
+
         private static void AppendFloatingText(
             IList<PresentationCue> cues,
             StatFeedbackKind kind,

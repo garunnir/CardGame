@@ -14,12 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: CardGame.CardBattle::CardGame.CardBattle.Presentation.StatFloatingTextPresentationAsset
   orientationMode: 0
   spawnOffsetLocal: {x: 0, y: 0.25, z: 0.02}
-  rotationEuler: {x: 0, y: 0, z: 0}
   faceForwardOffset: 0.02
+  rotationEuler: {x: 0, y: 0, z: 0}
   riseDirectionLocal: {x: 0, y: 1, z: 0}
   riseDistance: 0.55
   duration: 0.75
-  fontSize: 4
+  fontSize: 6
   sortingOrder: 0
   renderAboveCardFace: 1
   healColor: {r: 0.45, g: 1, b: 0.55, a: 1}
